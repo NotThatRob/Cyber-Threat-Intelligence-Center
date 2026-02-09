@@ -1,0 +1,21 @@
+[project]
+name = "cti-center"
+version = "0.1.0"
+description = "A web app that finds notable CVEs in the news and analyzes them automatically."
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.34.0",
+    "sqlalchemy>=2.0",
+    "jinja2>=3.1",
+    "httpx>=0.27.0",
+]
+
+[tool.setuptools.packages.find]
+include = ["cti_center*"]
+
+[project.optional-dependencies]
+dev = [
+    "ruff",
+    "pytest",
+]

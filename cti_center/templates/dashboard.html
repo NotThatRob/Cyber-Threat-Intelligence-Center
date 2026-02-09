@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Dashboard - CTI-Center{% endblock %}
+{% block content %}
+<table>
+    <thead>
+        <tr>
+            <th>CVE ID</th>
+            <th>Severity</th>
+            <th>CVSS</th>
+            <th>Product</th>
+            <th>Description</th>
+            <th>Published</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for cve in cves %}
+        <tr class="severity-{{ cve.severity | lower }}">
+            <td><a href="{{ cve.source_url }}">{{ cve.cve_id }}</a></td>
+            <td>{{ cve.severity }}</td>
+            <td>{{ cve.cvss_score }}</td>
+            <td>{{ cve.affected_product }}</td>
+            <td>{{ cve.description }}</td>
+            <td>{{ cve.date_published }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}
