@@ -24,7 +24,9 @@ uvicorn cti_center.app:app --reload
 
 Open [http://127.0.0.1:8000](http://127.0.0.1:8000). The database is created and seeded with sample data automatically on first startup. Live CVEs are fetched from the NVD API in a background thread.
 
-## NVD API
+## Data Sources
+
+### NVD API
 
 CVEs are fetched automatically from the [NVD API 2.0](https://nvd.nist.gov/developers/vulnerabilities) on server startup and can also be fetched manually:
 
@@ -39,6 +41,10 @@ export NVD_API_KEY=your-api-key
 ```
 
 Request a free key at [https://nvd.nist.gov/developers/request-an-api-key](https://nvd.nist.gov/developers/request-an-api-key).
+
+### CISA KEV
+
+The [CISA Known Exploited Vulnerabilities](https://www.cisa.gov/known-exploited-vulnerabilities-catalog) catalog is fetched automatically on startup. CVEs in the KEV catalog are tagged as "Actively Exploited" on the dashboard and include federal remediation deadlines and ransomware campaign indicators.
 
 ## Lint
 

@@ -183,3 +183,4 @@ cython_debug/
 # Misc
 TODO.md
 *.db
+api.env

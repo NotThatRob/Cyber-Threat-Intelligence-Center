@@ -1,4 +1,5 @@
 from datetime import date
+from typing import Optional
 
 from sqlalchemy import String, Float, Date, Text
 from sqlalchemy.orm import Mapped, mapped_column
@@ -17,3 +18,9 @@ class CVE(Base):
     affected_product: Mapped[str] = mapped_column(String(200))
     date_published: Mapped[date] = mapped_column(Date)
     source_url: Mapped[str] = mapped_column(String(500))
+
+    # CISA KEV (Known Exploited Vulnerabilities) fields
+    kev_date_added: Mapped[Optional[date]] = mapped_column(Date, nullable=True, default=None)
+    kev_due_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True, default=None)
+    kev_ransomware: Mapped[Optional[str]] = mapped_column(String(20), nullable=True, default=None)
+    kev_required_action: Mapped[Optional[str]] = mapped_column(Text, nullable=True, default=None)

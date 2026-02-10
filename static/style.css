@@ -11,3 +11,4 @@ a:hover { text-decoration: underline; }
 .severity-high td:nth-child(2) { color: #f0883e; font-weight: bold; }
 .severity-medium td:nth-child(2) { color: #d29922; }
 .severity-low td:nth-child(2) { color: #3fb950; }
+.badge-kev { display: inline-block; margin-left: 0.5rem; padding: 0.15rem 0.5rem; font-size: 0.7rem; font-weight: bold; color: #fff; background: #da3633; border-radius: 3px; vertical-align: middle; cursor: help; }

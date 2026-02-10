@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Dashboard - CTI-Center{% endblock %}
+{% block title %}Dashboard - Cyber Threat Intelligence Center{% endblock %}
 {% block content %}
 <table>
     <thead>
@@ -15,7 +15,12 @@
     <tbody>
         {% for cve in cves %}
         <tr class="severity-{{ cve.severity | lower }}">
-            <td><a href="{{ cve.source_url }}">{{ cve.cve_id }}</a></td>
+            <td>
+                <a href="{{ cve.source_url }}">{{ cve.cve_id }}</a>
+                {% if cve.kev_date_added %}
+                <span class="badge-kev" title="CISA KEV — Due: {{ cve.kev_due_date }}{% if cve.kev_ransomware == 'Known' %} | Ransomware: Known{% endif %}">Actively Exploited</span>
+                {% endif %}
+            </td>
             <td>{{ cve.severity }}</td>
             <td>{{ cve.cvss_score }}</td>
             <td>{{ cve.affected_product }}</td>
