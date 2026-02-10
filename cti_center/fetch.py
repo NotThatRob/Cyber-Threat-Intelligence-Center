@@ -1,4 +1,4 @@
-"""CLI entry point for fetching CVEs from NVD and GHSA.
+"""CLI entry point for fetching CVEs from NVD, GHSA, and news feeds.
 
 Usage:
     python -m cti_center.fetch
@@ -6,7 +6,7 @@ Usage:
 
 import logging
 
-from cti_center.database import Base, SessionLocal, engine, upsert_cves
+from cti_center.database import Base, SessionLocal, engine, upsert_cves, upsert_news
 from cti_center.logging_config import setup_logging
 from cti_center.nvd import fetch_cves
 
@@ -43,6 +43,22 @@ def main():
             db.close()
     except Exception:
         logger.error("GHSA fetch failed.", exc_info=True)
+
+    logger.info("Fetching security news from RSS feeds...")
+    try:
+        from cti_center.news import fetch_news
+
+        articles = fetch_news()
+        logger.info("Fetched %d articles from RSS feeds.", len(articles))
+
+        db = SessionLocal()
+        try:
+            new_count, skipped = upsert_news(db, articles)
+            logger.info("  %d new, %d already existed.", new_count, skipped)
+        finally:
+            db.close()
+    except Exception:
+        logger.error("News fetch failed.", exc_info=True)
 
 
 if __name__ == "__main__":

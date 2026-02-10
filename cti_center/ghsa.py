@@ -51,7 +51,9 @@ def fetch_ghsa(days_back: int = 7) -> list[CVE]:
         List of unsaved CVE model instances.
     """
     token = os.environ.get("GITHUB_TOKEN")
-    since = (datetime.now(timezone.utc) - timedelta(days=days_back)).strftime("%Y-%m-%d")
+    now = datetime.now(timezone.utc)
+    since = (now - timedelta(days=days_back)).strftime("%Y-%m-%d")
+    until = now.strftime("%Y-%m-%d")
 
     headers = {
         "Accept": "application/vnd.github+json",
@@ -63,7 +65,7 @@ def fetch_ghsa(days_back: int = 7) -> list[CVE]:
 
     params = {
         "type": "reviewed",
-        "published": f"{since}..",
+        "published": f"{since}..{until}",
         "per_page": 100,
         "sort": "published",
         "direction": "desc",
