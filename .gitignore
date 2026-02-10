@@ -187,3 +187,6 @@ logs/
 TODO.md
 *.db
 api.env
+
+# Claude
+.claude
