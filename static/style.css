@@ -12,3 +12,8 @@ a:hover { text-decoration: underline; }
 .severity-medium td:nth-child(2) { color: #d29922; }
 .severity-low td:nth-child(2) { color: #3fb950; }
 .badge-kev { display: inline-block; margin-left: 0.5rem; padding: 0.15rem 0.5rem; font-size: 0.7rem; font-weight: bold; color: #fff; background: #da3633; border-radius: 3px; vertical-align: middle; cursor: help; }
+.tabs { display: flex; gap: 0; border-bottom: 1px solid #21262d; margin-bottom: 1rem; }
+.tab { padding: 0.6rem 1rem; color: #8b949e; text-decoration: none; border-bottom: 2px solid transparent; font-size: 0.9rem; }
+.tab:hover { color: #c9d1d9; text-decoration: none; }
+.tab.active { color: #58a6ff; border-bottom-color: #58a6ff; font-weight: 600; }
+.empty-state { text-align: center; color: #8b949e; padding: 2rem 1rem; font-style: italic; }

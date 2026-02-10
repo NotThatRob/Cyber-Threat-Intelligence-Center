@@ -1,12 +1,14 @@
 import os
 import threading
+from datetime import date, timedelta
 from pathlib import Path
 
-from fastapi import Depends, FastAPI, Request
+from fastapi import Depends, FastAPI, Query, Request
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from jinja2 import select_autoescape
+from sqlalchemy import and_, case, or_
 from sqlalchemy.orm import Session
 
 from cti_center.database import Base, SessionLocal, engine, get_db, upsert_cves, upsert_kev
@@ -75,6 +77,50 @@ def on_startup():
 
 
 @app.get("/", response_class=HTMLResponse)
-def dashboard(request: Request, db: Session = Depends(get_db)):
-    cves = db.query(CVE).order_by(CVE.cvss_score.desc()).all()
-    return templates.TemplateResponse("dashboard.html", {"request": request, "cves": cves})
+def dashboard(
+    request: Request,
+    tab: str = Query("trending"),
+    db: Session = Depends(get_db),
+):
+    if tab not in ("trending", "recent", "all"):
+        tab = "trending"
+
+    today = date.today()
+
+    if tab == "trending":
+        kev_cutoff = today - timedelta(days=30)
+        recent_cutoff = today - timedelta(days=7)
+        cves = (
+            db.query(CVE)
+            .filter(
+                or_(
+                    CVE.kev_date_added >= kev_cutoff,
+                    and_(
+                        CVE.date_published >= recent_cutoff,
+                        CVE.severity.in_(["CRITICAL", "HIGH"]),
+                    ),
+                )
+            )
+            .order_by(
+                case((CVE.kev_date_added.isnot(None), 0), else_=1),
+                CVE.kev_date_added.desc().nullslast(),
+                CVE.cvss_score.desc(),
+            )
+            .limit(50)
+            .all()
+        )
+    elif tab == "recent":
+        recent_cutoff = today - timedelta(days=7)
+        cves = (
+            db.query(CVE)
+            .filter(CVE.date_published >= recent_cutoff)
+            .order_by(CVE.date_published.desc())
+            .all()
+        )
+    else:  # all
+        cves = db.query(CVE).order_by(CVE.date_published.desc()).all()
+
+    return templates.TemplateResponse(
+        "dashboard.html",
+        {"request": request, "cves": cves, "active_tab": tab},
+    )

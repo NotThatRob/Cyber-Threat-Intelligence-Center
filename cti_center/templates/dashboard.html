@@ -1,6 +1,11 @@
 {% extends "base.html" %}
 {% block title %}Dashboard - Cyber Threat Intelligence Center{% endblock %}
 {% block content %}
+<nav class="tabs">
+    <a href="/?tab=trending" class="tab {% if active_tab == 'trending' %}active{% endif %}">Trending</a>
+    <a href="/?tab=recent" class="tab {% if active_tab == 'recent' %}active{% endif %}">Recent</a>
+    <a href="/?tab=all" class="tab {% if active_tab == 'all' %}active{% endif %}">All</a>
+</nav>
 <table>
     <thead>
         <tr>
@@ -16,7 +21,7 @@
         {% for cve in cves %}
         <tr class="severity-{{ cve.severity | lower }}">
             <td>
-                <a href="{{ cve.source_url }}">{{ cve.cve_id }}</a>
+                <a href="{{ cve.source_url }}" target="_blank" rel="noopener">{{ cve.cve_id }}</a>
                 {% if cve.kev_date_added %}
                 <span class="badge-kev" title="CISA KEV — Due: {{ cve.kev_due_date }}{% if cve.kev_ransomware == 'Known' %} | Ransomware: Known{% endif %}">Actively Exploited</span>
                 {% endif %}
@@ -26,6 +31,10 @@
             <td>{{ cve.affected_product }}</td>
             <td>{{ cve.description }}</td>
             <td>{{ cve.date_published }}</td>
+        </tr>
+        {% else %}
+        <tr>
+            <td colspan="6" class="empty-state">No CVEs match this filter.</td>
         </tr>
         {% endfor %}
     </tbody>
