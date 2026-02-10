@@ -89,3 +89,40 @@ def upsert_kev(db, kev_entries):
 
     db.commit()
     return updated, created
+
+
+def upsert_news(db, articles):
+    """Insert new news articles and CVE links, skipping duplicates by URL.
+
+    Returns:
+        Tuple of (new_count, skipped_count).
+    """
+    from cti_center.models import CVENewsLink, NewsArticle
+
+    existing_urls = {row[0] for row in db.query(NewsArticle.url).all()}
+    new_count = 0
+    skipped = 0
+
+    for article in articles:
+        if article["url"] in existing_urls:
+            skipped += 1
+            continue
+
+        news = NewsArticle(
+            url=article["url"],
+            title=article["title"],
+            source_name=article["source_name"],
+            published_date=article.get("published_date"),
+            summary=article.get("summary"),
+        )
+        db.add(news)
+        db.flush()  # Get the generated id
+
+        for cve_id in article.get("cve_ids", []):
+            db.add(CVENewsLink(cve_id=cve_id, article_id=news.id))
+
+        existing_urls.add(article["url"])
+        new_count += 1
+
+    db.commit()
+    return new_count, skipped

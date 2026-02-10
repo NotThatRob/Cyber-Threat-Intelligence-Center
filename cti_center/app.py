@@ -12,9 +12,11 @@ from jinja2 import select_autoescape
 from sqlalchemy import and_, case, or_
 from sqlalchemy.orm import Session
 
-from cti_center.database import Base, SessionLocal, engine, get_db, upsert_cves, upsert_kev
+from sqlalchemy import func
+
+from cti_center.database import Base, SessionLocal, engine, get_db, upsert_cves, upsert_kev, upsert_news
 from cti_center.logging_config import setup_logging
-from cti_center.models import CVE
+from cti_center.models import CVE, CVENewsLink, NewsArticle
 from cti_center.seed import seed
 
 setup_logging()
@@ -99,6 +101,19 @@ def _background_fetch():
     except Exception:
         logger.error("MITRE enrichment failed.", exc_info=True)
 
+    try:
+        from cti_center.news import fetch_news
+
+        articles = fetch_news()
+        db = SessionLocal()
+        try:
+            new_count, skipped = upsert_news(db, articles)
+            logger.info("News background fetch: %d new, %d already existed.", new_count, skipped)
+        finally:
+            db.close()
+    except Exception:
+        logger.error("News background fetch failed.", exc_info=True)
+
 
 @app.on_event("startup")
 def on_startup():
@@ -150,7 +165,74 @@ def dashboard(
     else:  # all
         cves = db.query(CVE).order_by(CVE.date_published.desc()).all()
 
+    # Count linked news articles per CVE
+    cve_ids = [c.cve_id for c in cves]
+    news_counts: dict[str, int] = {}
+    if cve_ids:
+        rows = (
+            db.query(CVENewsLink.cve_id, func.count(CVENewsLink.id))
+            .filter(CVENewsLink.cve_id.in_(cve_ids))
+            .group_by(CVENewsLink.cve_id)
+            .all()
+        )
+        news_counts = {row[0]: row[1] for row in rows}
+
     return templates.TemplateResponse(
         "dashboard.html",
-        {"request": request, "cves": cves, "active_tab": tab},
+        {"request": request, "cves": cves, "active_tab": tab, "news_counts": news_counts},
+    )
+
+
+@app.get("/news", response_class=HTMLResponse)
+def news_page(
+    request: Request,
+    has_cves: str = Query("all"),
+    db: Session = Depends(get_db),
+):
+    if has_cves not in ("all", "yes", "no"):
+        has_cves = "all"
+
+    if has_cves == "yes":
+        # Only articles that have at least one CVE link
+        article_ids_with_cves = db.query(CVENewsLink.article_id).distinct()
+        articles = (
+            db.query(NewsArticle)
+            .filter(NewsArticle.id.in_(article_ids_with_cves))
+            .order_by(NewsArticle.published_date.desc())
+            .limit(200)
+            .all()
+        )
+    elif has_cves == "no":
+        # Only articles with no CVE links
+        article_ids_with_cves = db.query(CVENewsLink.article_id).distinct()
+        articles = (
+            db.query(NewsArticle)
+            .filter(NewsArticle.id.notin_(article_ids_with_cves))
+            .order_by(NewsArticle.published_date.desc())
+            .limit(200)
+            .all()
+        )
+    else:
+        articles = (
+            db.query(NewsArticle)
+            .order_by(NewsArticle.published_date.desc())
+            .limit(200)
+            .all()
+        )
+
+    # Collect CVE links for each article
+    article_ids = [a.id for a in articles]
+    article_cves: dict[int, list[str]] = {}
+    if article_ids:
+        links = (
+            db.query(CVENewsLink)
+            .filter(CVENewsLink.article_id.in_(article_ids))
+            .all()
+        )
+        for link in links:
+            article_cves.setdefault(link.article_id, []).append(link.cve_id)
+
+    return templates.TemplateResponse(
+        "news.html",
+        {"request": request, "articles": articles, "article_cves": article_cves, "has_cves": has_cves},
     )

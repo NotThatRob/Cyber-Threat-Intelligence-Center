@@ -56,6 +56,10 @@ Optionally set `GITHUB_TOKEN` for higher rate limits (5,000 req/hr vs 60 req/hr)
 export GITHUB_TOKEN=your-token
 ```
 
+### Security News (RSS)
+
+Security news articles are fetched automatically from RSS feeds on startup and via `python -m cti_center.fetch`. Currently ingests BleepingComputer, The Hacker News, Dark Reading, and Krebs on Security. Articles mentioning CVE IDs are linked to CVEs in the database and displayed on the `/news` page. CVEs with news coverage show a badge on the dashboard.
+
 ### MITRE CVE Enrichment
 
 CVEs missing CVSS scores (e.g., KEV-only records) are automatically enriched using the [MITRE CVE Services API](https://www.cve.org/AllResources/CveServices) on startup. This fills in CVSS scores, severity ratings, descriptions, and affected product information.

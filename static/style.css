@@ -16,4 +16,8 @@ a:hover { text-decoration: underline; }
 .tab { padding: 0.6rem 1rem; color: #8b949e; text-decoration: none; border-bottom: 2px solid transparent; font-size: 0.9rem; }
 .tab:hover { color: #c9d1d9; text-decoration: none; }
 .tab.active { color: #58a6ff; border-bottom-color: #58a6ff; font-weight: 600; }
+.badge-news { display: inline-block; margin-left: 0.5rem; padding: 0.15rem 0.5rem; font-size: 0.7rem; font-weight: bold; color: #fff; background: #6f42c1; border-radius: 3px; vertical-align: middle; }
+.header-nav { margin-top: 0.5rem; display: flex; gap: 1rem; }
+.header-nav a { color: #8b949e; font-size: 0.9rem; }
+.header-nav a:hover { color: #c9d1d9; }
 .empty-state { text-align: center; color: #8b949e; padding: 2rem 1rem; font-style: italic; }

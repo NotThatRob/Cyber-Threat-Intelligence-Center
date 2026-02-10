@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}News - Cyber Threat Intelligence Center{% endblock %}
+{% block content %}
+<h2>Security News</h2>
+<nav class="tabs">
+    <a href="/news?has_cves=all" class="tab {% if has_cves == 'all' %}active{% endif %}">All</a>
+    <a href="/news?has_cves=yes" class="tab {% if has_cves == 'yes' %}active{% endif %}">With CVEs</a>
+    <a href="/news?has_cves=no" class="tab {% if has_cves == 'no' %}active{% endif %}">Without CVEs</a>
+</nav>
+<table>
+    <thead>
+        <tr>
+            <th>Title</th>
+            <th>Source</th>
+            <th>Published</th>
+            <th>Related CVEs</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for article in articles %}
+        <tr>
+            <td><a href="{{ article.url }}" target="_blank" rel="noopener">{{ article.title }}</a></td>
+            <td>{{ article.source_name }}</td>
+            <td>{{ article.published_date }}</td>
+            <td>
+                {% for cve_id in article_cves.get(article.id, []) %}
+                <a href="https://nvd.nist.gov/vuln/detail/{{ cve_id }}" target="_blank" rel="noopener">{{ cve_id }}</a>{% if not loop.last %}, {% endif %}
+                {% endfor %}
+            </td>
+        </tr>
+        {% else %}
+        <tr>
+            <td colspan="4" class="empty-state">No news articles yet. Articles will appear after the next background fetch.</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}
