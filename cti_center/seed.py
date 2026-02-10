@@ -1,9 +1,12 @@
 """Create tables and insert sample CVE data."""
 
+import logging
 from datetime import date
 
 from cti_center.database import Base, SessionLocal, engine
 from cti_center.models import CVE
+
+logger = logging.getLogger(__name__)
 
 SAMPLE_CVES = [
     CVE(
@@ -79,9 +82,9 @@ def seed():
         if db.query(CVE).count() == 0:
             db.add_all(SAMPLE_CVES)
             db.commit()
-            print(f"Seeded {len(SAMPLE_CVES)} CVEs.")
+            logger.info("Seeded %d CVEs.", len(SAMPLE_CVES))
         else:
-            print("Database already has data, skipping seed.")
+            logger.info("Database already has data, skipping seed.")
     finally:
         db.close()
 

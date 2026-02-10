@@ -180,6 +180,9 @@ cython_debug/
 .cursorignore
 .cursorindexingignore
 
+# Logs
+logs/
+
 # Misc
 TODO.md
 *.db

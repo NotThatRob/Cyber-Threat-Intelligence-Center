@@ -38,15 +38,19 @@ NVD_API_KEY=your-key python -m cti_center.fetch
 
 ## Architecture
 
+- `cti_center/logging_config.py` — Centralized logging setup; configures rotating file handler (`logs/cti_center.log`) and console handler
 - `cti_center/app.py` — FastAPI application entry point, route definitions, template config
 - `cti_center/models.py` — SQLAlchemy ORM models (CVE table)
 - `cti_center/database.py` — Engine, session factory, `Base` class, `get_db()` dependency
 - `cti_center/nvd.py` — NVD API 2.0 client; fetches, parses, and returns CVE model instances
 - `cti_center/kev.py` — CISA KEV catalog client; downloads the Known Exploited Vulnerabilities JSON and enriches CVEs with exploitation status, remediation deadlines, and ransomware campaign data
-- `cti_center/fetch.py` — CLI entry point (`python -m cti_center.fetch`) for manual NVD ingestion
+- `cti_center/ghsa.py` — GitHub Advisory Database client; fetches reviewed advisories with CVE IDs across npm, pip, Maven, Go, Rust, etc. Optional `GITHUB_TOKEN` for higher rate limits
+- `cti_center/mitre.py` — MITRE CVE Services enrichment; looks up individual CVE records to fill CVSS/description gaps in KEV-created or incomplete records
+- `cti_center/fetch.py` — CLI entry point (`python -m cti_center.fetch`) for manual NVD and GHSA ingestion
 - `cti_center/seed.py` — Sample data seeder (runs automatically on startup as fallback)
 - `cti_center/templates/` — Jinja2 HTML templates (`base.html` layout, `dashboard.html`)
 - `static/` — CSS assets served via FastAPI's StaticFiles mount
+- `logs/` — Runtime log files (gitignored); created automatically on startup
 
 ## Key Concepts
 
