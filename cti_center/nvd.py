@@ -1,5 +1,6 @@
 """NVD API 2.0 client for fetching recent CVEs."""
 
+import logging
 import os
 import time
 from datetime import date, datetime, timedelta, timezone
@@ -7,6 +8,8 @@ from datetime import date, datetime, timedelta, timezone
 import httpx
 
 from cti_center.models import CVE
+
+logger = logging.getLogger(__name__)
 
 NVD_API_URL = "https://services.nvd.nist.gov/rest/json/cves/2.0"
 
@@ -101,7 +104,7 @@ def fetch_cves(days_back: int = 7) -> list[CVE]:
 
             if total_results is None:
                 total_results = data.get("totalResults", 0)
-                print(f"NVD API: {total_results} total CVEs in the last {days_back} days")
+                logger.info("NVD API: %d total CVEs in the last %d days", total_results, days_back)
 
             for vuln in data.get("vulnerabilities", []):
                 cve_data = vuln.get("cve", {})

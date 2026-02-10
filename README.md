@@ -46,6 +46,24 @@ Request a free key at [https://nvd.nist.gov/developers/request-an-api-key](https
 
 The [CISA Known Exploited Vulnerabilities](https://www.cisa.gov/known-exploited-vulnerabilities-catalog) catalog is fetched automatically on startup. CVEs in the KEV catalog are tagged as "Actively Exploited" on the dashboard and include federal remediation deadlines and ransomware campaign indicators.
 
+### GitHub Advisory Database
+
+Reviewed security advisories are fetched from the [GitHub Advisory Database](https://github.com/advisories) on startup and via `python -m cti_center.fetch`. Covers advisories across npm, pip, Maven, Go, Rust, and other ecosystems.
+
+Optionally set `GITHUB_TOKEN` for higher rate limits (5,000 req/hr vs 60 req/hr):
+
+```bash
+export GITHUB_TOKEN=your-token
+```
+
+### MITRE CVE Enrichment
+
+CVEs missing CVSS scores (e.g., KEV-only records) are automatically enriched using the [MITRE CVE Services API](https://www.cve.org/AllResources/CveServices) on startup. This fills in CVSS scores, severity ratings, descriptions, and affected product information.
+
+## Logging
+
+All modules log to `logs/cti_center.log` (rotating, 5 MB max, 3 backups) and to the console. The `logs/` directory is created automatically on startup. Log level is DEBUG in the file and INFO on the console.
+
 ## Lint
 
 ```bash

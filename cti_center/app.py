@@ -1,3 +1,4 @@
+import logging
 import os
 import threading
 from datetime import date, timedelta
@@ -12,8 +13,12 @@ from sqlalchemy import and_, case, or_
 from sqlalchemy.orm import Session
 
 from cti_center.database import Base, SessionLocal, engine, get_db, upsert_cves, upsert_kev
+from cti_center.logging_config import setup_logging
 from cti_center.models import CVE
 from cti_center.seed import seed
+
+setup_logging()
+logger = logging.getLogger(__name__)
 
 # Load API keys from api.env if present (does not override existing env vars)
 _env_file = Path(__file__).resolve().parent.parent / "api.env"
@@ -50,11 +55,11 @@ def _background_fetch():
         db = SessionLocal()
         try:
             new_count, skipped = upsert_cves(db, cves)
-            print(f"NVD background fetch: {new_count} new, {skipped} already existed.")
+            logger.info("NVD background fetch: %d new, %d already existed.", new_count, skipped)
         finally:
             db.close()
-    except Exception as exc:
-        print(f"NVD background fetch failed: {exc}")
+    except Exception:
+        logger.error("NVD background fetch failed.", exc_info=True)
 
     try:
         from cti_center.kev import fetch_kev
@@ -63,11 +68,36 @@ def _background_fetch():
         db = SessionLocal()
         try:
             updated, created = upsert_kev(db, kev_entries)
-            print(f"KEV background fetch: {updated} enriched, {created} new.")
+            logger.info("KEV background fetch: %d enriched, %d new.", updated, created)
         finally:
             db.close()
-    except Exception as exc:
-        print(f"KEV background fetch failed: {exc}")
+    except Exception:
+        logger.error("KEV background fetch failed.", exc_info=True)
+
+    try:
+        from cti_center.ghsa import fetch_ghsa
+
+        advisories = fetch_ghsa()
+        db = SessionLocal()
+        try:
+            new_count, skipped = upsert_cves(db, advisories)
+            logger.info("GHSA background fetch: %d new, %d already existed.", new_count, skipped)
+        finally:
+            db.close()
+    except Exception:
+        logger.error("GHSA background fetch failed.", exc_info=True)
+
+    try:
+        from cti_center.mitre import enrich_cves
+
+        db = SessionLocal()
+        try:
+            enriched, failed = enrich_cves(db)
+            logger.info("MITRE enrichment: %d enriched, %d failed.", enriched, failed)
+        finally:
+            db.close()
+    except Exception:
+        logger.error("MITRE enrichment failed.", exc_info=True)
 
 
 @app.on_event("startup")
