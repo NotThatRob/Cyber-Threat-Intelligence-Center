@@ -21,3 +21,8 @@ a:hover { text-decoration: underline; }
 .header-nav a { color: #8b949e; font-size: 0.9rem; }
 .header-nav a:hover { color: #c9d1d9; }
 .empty-state { text-align: center; color: #8b949e; padding: 2rem 1rem; font-style: italic; }
+.risk-score { display: inline-block; min-width: 2rem; padding: 0.2rem 0.5rem; font-size: 0.85rem; font-weight: bold; text-align: center; border-radius: 3px; cursor: help; }
+.risk-score-critical { background: #f85149; color: #fff; }
+.risk-score-high { background: #f0883e; color: #fff; }
+.risk-score-medium { background: #d29922; color: #fff; }
+.risk-score-low { background: #3fb950; color: #fff; }

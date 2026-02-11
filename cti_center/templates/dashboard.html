@@ -10,6 +10,7 @@
     <thead>
         <tr>
             <th>CVE ID</th>
+            <th>Risk Score</th>
             <th>Severity</th>
             <th>CVSS</th>
             <th>Product</th>
@@ -19,6 +20,7 @@
     </thead>
     <tbody>
         {% for cve in cves %}
+        {% set rs = risk_scores[cve.cve_id] %}
         <tr class="severity-{{ cve.severity | lower }}">
             <td>
                 <a href="{{ cve.source_url }}" target="_blank" rel="noopener">{{ cve.cve_id }}</a>
@@ -29,6 +31,7 @@
                 <a href="/news" class="badge-news" title="{{ news_counts[cve.cve_id] }} news article(s)">{{ news_counts[cve.cve_id] }} in news</a>
                 {% endif %}
             </td>
+            <td><span class="risk-score risk-score-{{ rs.label }}" title="{{ rs.factors | join('&#10;') }}">{{ rs.score }}</span></td>
             <td>{{ cve.severity }}</td>
             <td>{{ cve.cvss_score }}</td>
             <td>{{ cve.affected_product }}</td>
@@ -37,7 +40,7 @@
         </tr>
         {% else %}
         <tr>
-            <td colspan="6" class="empty-state">No CVEs match this filter.</td>
+            <td colspan="7" class="empty-state">No CVEs match this filter.</td>
         </tr>
         {% endfor %}
     </tbody>
