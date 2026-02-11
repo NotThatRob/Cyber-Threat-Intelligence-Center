@@ -46,6 +46,7 @@ NVD_API_KEY=your-key python -m cti_center.fetch
 - `cti_center/kev.py` — CISA KEV catalog client; downloads the Known Exploited Vulnerabilities JSON and enriches CVEs with exploitation status, remediation deadlines, and ransomware campaign data
 - `cti_center/ghsa.py` — GitHub Advisory Database client; fetches reviewed advisories with CVE IDs across npm, pip, Maven, Go, Rust, etc. Optional `GITHUB_TOKEN` for higher rate limits
 - `cti_center/mitre.py` — MITRE CVE Services enrichment; looks up individual CVE records to fill CVSS/description gaps in KEV-created or incomplete records
+- `cti_center/scoring.py` — Custom risk re-scoring engine; computes a 0-100 risk score blending CVSS, exploit maturity (KEV), news velocity, recency, and KEV urgency with human-readable factor explanations
 - `cti_center/news.py` — RSS feed client; fetches articles from BleepingComputer, The Hacker News, Dark Reading, and Krebs on Security, extracts CVE IDs via regex, returns structured article dicts
 - `cti_center/fetch.py` — CLI entry point (`python -m cti_center.fetch`) for manual NVD, GHSA, and news ingestion
 - `cti_center/seed.py` — Sample data seeder (runs automatically on startup as fallback)
