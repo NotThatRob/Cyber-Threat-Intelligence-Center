@@ -93,13 +93,13 @@ CVEs missing CVSS scores (e.g., KEV-only records) are automatically enriched usi
 
 CTI-Center computes a custom 0-100 risk score for every CVE, designed to surface what actually matters over what merely has a high CVSS number.
 
-| Component | Weight | Description |
-|-----------|--------|-------------|
-| CVSS Base | 35% | Raw CVSS v3 score mapped to 0-35 |
-| Exploit Maturity | 30% | CISA KEV listing (25pts) + ransomware use (+5pts) |
-| News Velocity | 15% | Number of news sources covering the CVE (capped at 5) |
-| Recency | 10% | How recently the CVE was published (last 7 days = full score) |
-| KEV Urgency | 10% | Proximity to federal remediation deadline |
+| Component | Default Weight | Description |
+|-----------|---------------|-------------|
+| `cvss` | 35 | Raw CVSS v3 score mapped proportionally |
+| `exploit` | 30 | CISA KEV listing + ransomware indicator |
+| `news` | 15 | Number of news sources covering the CVE (capped at 5) |
+| `recency` | 10 | How recently the CVE was published (last 7 days = full weight) |
+| `urgency` | 10 | Proximity to federal remediation deadline |
 
 Each score includes factor strings explaining the rating, visible via tooltip on the dashboard. Examples:
 
@@ -107,6 +107,35 @@ Each score includes factor strings explaining the rating, visible via tooltip on
 - *"High CVSS but no real-world exploitation observed"*
 - *"Low CVSS but actively exploited — real-world risk exceeds base score"*
 - *"Federal remediation deadline overdue"*
+
+### Customizing Weights
+
+Weights are configurable by editing the `RISK_WEIGHTS` dictionary in `cti_center/scoring.py`. Each value is the maximum number of points that component can contribute. Weights must sum to 100.
+
+```python
+# cti_center/scoring.py
+RISK_WEIGHTS = {
+    "cvss":    35,   # Raw CVSS v3 score mapped proportionally
+    "exploit": 30,   # CISA KEV listing + ransomware indicator
+    "news":    15,   # Number of news sources covering the CVE
+    "recency": 10,   # How recently the CVE was published
+    "urgency": 10,   # Proximity to federal remediation deadline
+}
+```
+
+For example, an organization that prioritizes exploit status over CVSS could shift weight from `cvss` to `exploit`:
+
+```python
+RISK_WEIGHTS = {
+    "cvss":    20,
+    "exploit": 45,
+    "news":    15,
+    "recency": 10,
+    "urgency": 10,
+}
+```
+
+Weights can also be passed programmatically to `compute_risk_score()` and `score_cves()` via the optional `weights` parameter, which overrides `RISK_WEIGHTS` for that call without changing the global default.
 
 ## Configuration
 
