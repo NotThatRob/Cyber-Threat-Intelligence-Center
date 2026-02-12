@@ -147,6 +147,108 @@ NVD_API_KEY=your-nvd-key
 GITHUB_TOKEN=your-github-token
 ```
 
+## Deployment
+
+The default `uvicorn ... --reload` command is for local development. To host CTI-Center on a server, follow the guidance below.
+
+### Production Server
+
+Run uvicorn without `--reload`, bound to all interfaces, with multiple workers:
+
+```bash
+uvicorn cti_center.app:app --host 0.0.0.0 --port 8000 --workers 4
+```
+
+> **Note:** Each worker process spawns its own background data-fetch thread on startup. This is fine for a single-server SQLite setup but means duplicate fetches will run briefly at boot. For most deployments this is harmless.
+
+### Reverse Proxy
+
+In production, place a reverse proxy in front of uvicorn for TLS termination, static file serving, and rate limiting.
+
+**Nginx** — minimal config:
+
+```nginx
+server {
+    listen 443 ssl;
+    server_name cti.example.com;
+
+    ssl_certificate     /etc/letsencrypt/live/cti.example.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/cti.example.com/privkey.pem;
+
+    location / {
+        proxy_pass http://127.0.0.1:8000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+```
+
+**Caddy** is a simpler alternative with automatic HTTPS — a two-line `Caddyfile`:
+
+```
+cti.example.com
+reverse_proxy localhost:8000
+```
+
+### Docker
+
+Example `Dockerfile` (not included in the repo — create one if needed):
+
+```dockerfile
+FROM python:3.12-slim
+WORKDIR /app
+COPY . .
+RUN pip install --no-cache-dir -e .
+EXPOSE 8000
+CMD ["uvicorn", "cti_center.app:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "4"]
+```
+
+Run it:
+
+```bash
+docker build -t cti-center .
+docker run -d -p 8000:8000 \
+  -v cti-data:/app \
+  -e NVD_API_KEY=your-key \
+  -e GITHUB_TOKEN=your-token \
+  cti-center
+```
+
+Or use a `docker-compose.yml`:
+
+```yaml
+services:
+  cti-center:
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - cti-data:/app
+    environment:
+      - NVD_API_KEY=${NVD_API_KEY}
+      - GITHUB_TOKEN=${GITHUB_TOKEN}
+
+volumes:
+  cti-data:
+```
+
+### Environment Variables
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `NVD_API_KEY` | No | NVD API key for faster rate limits (0.6s vs 6s between requests) |
+| `GITHUB_TOKEN` | No | GitHub token for higher GHSA rate limits (5,000 req/hr vs 60 req/hr) |
+
+Both can also be set in an `api.env` file in the project root (see [Configuration](#configuration)).
+
+### Deployment Notes
+
+- **SQLite persistence** — The database is a local file (`cti_center.db`). In Docker, mount a volume so data survives container restarts.
+- **No built-in authentication** — CTI-Center does not include user auth. If exposing to the internet, put it behind a reverse proxy with authentication, a VPN, or restrict access by IP.
+- **Background fetches on startup** — Data ingestion runs automatically when the server starts. With multiple workers, each will trigger a fetch. This is safe but redundant; for larger deployments consider running fetches via a separate cron job (`python -m cti_center.fetch`) and disabling the startup fetch.
+
 ## Logging
 
 All modules log to `logs/cti_center.log` (rotating, 5 MB max, 3 backups) and to the console. The `logs/` directory is created automatically on startup. Log level is DEBUG in the file and INFO on the console.
