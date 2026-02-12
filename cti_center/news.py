@@ -2,6 +2,7 @@
 
 import logging
 import re
+import time
 from datetime import date, datetime, timezone
 from time import mktime
 
@@ -22,9 +23,25 @@ RSS_FEEDS: dict[str, str] = {
 _CVE_PATTERN = re.compile(r"CVE-\d{4}-\d{4,7}")
 
 
+_HTML_TAG_PATTERN = re.compile(r"<[^>]+>")
+
+
 def _extract_cve_ids(text: str) -> list[str]:
     """Extract unique CVE IDs from text using regex."""
     return list(dict.fromkeys(_CVE_PATTERN.findall(text)))
+
+
+def _fetch_article_cve_ids(client: httpx.Client, url: str) -> list[str]:
+    """Fetch the full article page and extract CVE IDs from its body."""
+    try:
+        resp = client.get(url, headers={"User-Agent": USER_AGENT})
+        resp.raise_for_status()
+        # Strip HTML tags to get plain text, then search for CVE IDs
+        plain = _HTML_TAG_PATTERN.sub(" ", resp.text)
+        return _extract_cve_ids(plain)
+    except httpx.HTTPError:
+        logger.debug("Failed to fetch article page: %s", url, exc_info=True)
+        return []
 
 
 def fetch_news(days_back: int = 7) -> list[dict]:
@@ -43,6 +60,8 @@ def fetch_news(days_back: int = 7) -> list[dict]:
 
     articles: list[dict] = []
     seen_urls: set[str] = set()
+    page_fetch_count = 0
+    t_start = time.monotonic()
 
     with httpx.Client(timeout=30.0, follow_redirects=True) as client:
         for source_name, feed_url in RSS_FEEDS.items():
@@ -81,9 +100,20 @@ def fetch_news(days_back: int = 7) -> list[dict]:
                 title = entry.get("title", "").strip()
                 summary = entry.get("summary", "").strip()
 
-                # Extract CVE IDs from title and summary
+                # Extract CVE IDs from title and summary first
                 combined_text = f"{title} {summary}"
                 cve_ids = _extract_cve_ids(combined_text)
+
+                # If none found in RSS content, try the full article page
+                if not cve_ids:
+                    page_cves = _fetch_article_cve_ids(client, url)
+                    if page_cves:
+                        cve_ids = page_cves
+                        logger.debug(
+                            "Found %d CVE(s) in full page: %s",
+                            len(page_cves), url,
+                        )
+                        page_fetch_count += 1
 
                 seen_urls.add(url)
                 articles.append({
@@ -103,5 +133,9 @@ def fetch_news(days_back: int = 7) -> list[dict]:
 
             logger.info("Parsed %d entries from %s.", len(feed.entries), source_name)
 
-    logger.info("News fetch complete: %d articles.", len(articles))
+    elapsed = time.monotonic() - t_start
+    logger.info(
+        "News fetch complete: %d articles in %.1fs (%d full-page fetches).",
+        len(articles), elapsed, page_fetch_count,
+    )
     return articles
