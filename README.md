@@ -27,8 +27,8 @@ Most CVE tools tell you what exists. CTI-Center tells you what matters, and why,
 ### Installation
 
 ```bash
-git clone https://github.com/NotThatRob/CTI-Center.git
-cd CTI-Center
+git clone https://github.com/NotThatRob/Cyber-Threat-Intelligence-Center.git
+cd Cyber-Threat-Intelligence-Center
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -e ".[dev]"
