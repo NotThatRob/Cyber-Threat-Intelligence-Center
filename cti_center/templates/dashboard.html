@@ -31,7 +31,8 @@
                 <a href="/news" class="badge-news" title="{{ news_counts[cve.cve_id] }} news article(s)">{{ news_counts[cve.cve_id] }} in news</a>
                 {% endif %}
             </td>
-            <td><span class="risk-score risk-score-{{ rs.label }}" title="{{ rs.factors | join('&#10;') }}">{{ rs.score }}</span></td>
+            {% set w = risk_weights %}
+            <td><span class="risk-score risk-score-{{ rs.label }}" title="Risk Score Breakdown&#10;&#10;CVSS Base:        {{ rs.cvss_component | round(1) }} / {{ w.cvss | int }}&#10;Exploit Maturity:  {{ rs.exploit_component | round(1) }} / {{ w.exploit | int }}&#10;News Velocity:     {{ rs.news_component | round(1) }} / {{ w.news | int }}&#10;Recency:           {{ rs.recency_component | round(1) }} / {{ w.recency | int }}&#10;KEV Urgency:       {{ rs.urgency_component | round(1) }} / {{ w.urgency | int }}{% if rs.factors %}&#10;&#10;{% for factor in rs.factors %}&#8226; {{ factor }}{% if not loop.last %}&#10;{% endif %}{% endfor %}{% endif %}">{{ rs.score }}</span></td>
             <td>{{ cve.severity }}</td>
             <td>{{ cve.cvss_score }}</td>
             <td>{{ cve.affected_product }}</td>
