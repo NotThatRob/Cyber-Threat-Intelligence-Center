@@ -3,11 +3,7 @@
 import logging
 import re
 import time
-<<<<<<< HEAD
 from datetime import date, datetime, timedelta, timezone
-=======
-from datetime import date, datetime, timezone
->>>>>>> origin/main
 from time import mktime
 
 import feedparser
@@ -37,11 +33,8 @@ def _extract_cve_ids(text: str) -> list[str]:
 
 def _fetch_article_cve_ids(client: httpx.Client, url: str) -> list[str]:
     """Fetch the full article page and extract CVE IDs from its body."""
-<<<<<<< HEAD
     if not url.startswith(("http://", "https://")):
         return []
-=======
->>>>>>> origin/main
     try:
         resp = client.get(url, headers={"User-Agent": USER_AGENT})
         resp.raise_for_status()
@@ -65,11 +58,7 @@ def fetch_news(days_back: int = 7) -> list[dict]:
     """
     cutoff = datetime.now(timezone.utc).replace(
         hour=0, minute=0, second=0, microsecond=0
-<<<<<<< HEAD
     ) - timedelta(days=days_back)
-=======
-    ) - __import__("datetime").timedelta(days=days_back)
->>>>>>> origin/main
 
     articles: list[dict] = []
     seen_urls: set[str] = set()

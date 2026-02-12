@@ -176,9 +176,6 @@ cython_debug/
 # Logs
 logs/
 
-# Logs
-logs/
-
 # Misc
 TODO.md
 *.db

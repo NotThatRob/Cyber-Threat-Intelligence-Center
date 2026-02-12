@@ -22,11 +22,7 @@ Most CVE tools tell you what exists. CTI-Center tells you what matters, and why,
 
 ### Prerequisites
 
-<<<<<<< HEAD
 - Python 3.12+
-=======
-- Python 3.10+
->>>>>>> origin/main
 
 ### Installation
 

@@ -12,11 +12,6 @@ from jinja2 import select_autoescape
 from sqlalchemy import and_, case, func, or_
 from sqlalchemy.orm import Session
 
-<<<<<<< HEAD
-=======
-from sqlalchemy import func
-
->>>>>>> origin/main
 from cti_center.database import Base, SessionLocal, engine, get_db, upsert_cves, upsert_kev, upsert_news
 from cti_center.logging_config import setup_logging
 from cti_center.models import CVE, CVENewsLink, NewsArticle
