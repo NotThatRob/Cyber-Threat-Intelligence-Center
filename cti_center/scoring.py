@@ -65,6 +65,10 @@ def compute_risk_score(
     factors: list[str] = []
     today = date.today()
 
+    # Rejected CVEs get a score of 0.
+    if cve.description and cve.description.startswith("Rejected reason:"):
+        return RiskScore(score=0, factors=["CVE rejected by NVD"])
+
     # --- CVSS Base (0-w["cvss"]) ---
     cvss = cve.cvss_score or 0.0
     cvss_component = cvss * (w["cvss"] / 10.0)
