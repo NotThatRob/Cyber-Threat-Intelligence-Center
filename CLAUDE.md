@@ -63,7 +63,7 @@ NVD_API_KEY=your-key python -m cti_center.fetch
 
 ## Important
 
-Ensure the @.gitignore, @TODO.MD, and @README.md are up to date after every change. The @TODO.md is the lifeblood of this project, it should be the place to check for past and future implementations.
+Ensure the @.gitignore and @README.md are up to date after every change. The local @TODO.md tracks the full roadmap and should be consulted for past and future implementations (it is gitignored and not part of the public repo).
 
 ## License
 

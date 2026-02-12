@@ -3,6 +3,7 @@ name = "cti-center"
 version = "0.1.0"
 description = "A web app that finds notable CVEs in the news and analyzes them automatically."
 requires-python = ">=3.12"
+license = {text = "MIT"}
 dependencies = [
     "fastapi>=0.115.0",
     "uvicorn[standard]>=0.34.0",
