@@ -17,7 +17,7 @@ from sqlalchemy import func
 from cti_center.database import Base, SessionLocal, engine, get_db, upsert_cves, upsert_kev, upsert_news
 from cti_center.logging_config import setup_logging
 from cti_center.models import CVE, CVENewsLink, NewsArticle
-from cti_center.scoring import score_cves
+from cti_center.scoring import RISK_WEIGHTS, score_cves
 from cti_center.seed import seed
 
 setup_logging()
@@ -185,7 +185,7 @@ def dashboard(
 
     return templates.TemplateResponse(
         "dashboard.html",
-        {"request": request, "cves": cves, "active_tab": tab, "news_counts": news_counts, "risk_scores": risk_scores},
+        {"request": request, "cves": cves, "active_tab": tab, "news_counts": news_counts, "risk_scores": risk_scores, "risk_weights": RISK_WEIGHTS},
     )
 
 

@@ -7,10 +7,10 @@ th, td { text-align: left; padding: 0.6rem 1rem; border-bottom: 1px solid #21262
 th { background: #161b22; color: #8b949e; text-transform: uppercase; font-size: 0.8rem; }
 a { color: #58a6ff; text-decoration: none; }
 a:hover { text-decoration: underline; }
-.severity-critical td:nth-child(2) { color: #f85149; font-weight: bold; }
-.severity-high td:nth-child(2) { color: #f0883e; font-weight: bold; }
-.severity-medium td:nth-child(2) { color: #d29922; }
-.severity-low td:nth-child(2) { color: #3fb950; }
+.severity-critical td:nth-child(3) { color: #f85149; font-weight: bold; }
+.severity-high td:nth-child(3) { color: #f0883e; font-weight: bold; }
+.severity-medium td:nth-child(3) { color: #d29922; }
+.severity-low td:nth-child(3) { color: #3fb950; }
 .badge-kev { display: inline-block; margin-left: 0.5rem; padding: 0.15rem 0.5rem; font-size: 0.7rem; font-weight: bold; color: #fff; background: #da3633; border-radius: 3px; vertical-align: middle; cursor: help; }
 .tabs { display: flex; gap: 0; border-bottom: 1px solid #21262d; margin-bottom: 1rem; }
 .tab { padding: 0.6rem 1rem; color: #8b949e; text-decoration: none; border-bottom: 2px solid transparent; font-size: 0.9rem; }
