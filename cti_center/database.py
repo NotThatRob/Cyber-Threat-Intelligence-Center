@@ -1,5 +1,10 @@
-from sqlalchemy import create_engine
+import logging
+
+from sqlalchemy import create_engine, text
+from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
+
+logger = logging.getLogger(__name__)
 
 DATABASE_URL = "sqlite:///cti_center.db"
 
@@ -18,6 +23,16 @@ def get_db():
         yield db
     finally:
         db.close()
+
+
+def apply_migrations(db):
+    """Run lightweight schema migrations that are safe on both new and existing DBs."""
+    db.execute(text(
+        "CREATE UNIQUE INDEX IF NOT EXISTS uq_cve_news_link "
+        "ON cve_news_links(cve_id, article_id)"
+    ))
+    db.commit()
+    logger.info("Migrations applied (uq_cve_news_link index).")
 
 
 def upsert_cves(db, cves):
@@ -92,19 +107,36 @@ def upsert_kev(db, kev_entries):
 
 
 def upsert_news(db, articles):
-    """Insert new news articles and CVE links, skipping duplicates by URL.
+    """Insert new news articles and CVE links, re-linking existing articles.
+
+    For new articles: inserts the article and its CVE links.
+    For existing articles: attempts to insert any missing CVE links (re-linking).
+    All CVENewsLink inserts use INSERT OR IGNORE to tolerate the unique constraint.
 
     Returns:
-        Tuple of (new_count, skipped_count).
+        Tuple of (new_articles, skipped, new_links).
     """
     from cti_center.models import CVENewsLink, NewsArticle
 
-    existing_urls = {row[0] for row in db.query(NewsArticle.url).all()}
+    existing = {row.url: row.id for row in db.query(NewsArticle.url, NewsArticle.id).all()}
     new_count = 0
     skipped = 0
+    new_links = 0
 
     for article in articles:
-        if article["url"] in existing_urls:
+        cve_ids = article.get("cve_ids", [])
+
+        if article["url"] in existing:
+            # Re-link: try to add any CVE links that are missing for this article.
+            article_id = existing[article["url"]]
+            for cve_id in cve_ids:
+                stmt = (
+                    sqlite_insert(CVENewsLink.__table__)
+                    .values(cve_id=cve_id, article_id=article_id)
+                    .on_conflict_do_nothing(index_elements=["cve_id", "article_id"])
+                )
+                result = db.execute(stmt)
+                new_links += result.rowcount
             skipped += 1
             continue
 
@@ -118,11 +150,17 @@ def upsert_news(db, articles):
         db.add(news)
         db.flush()  # Get the generated id
 
-        for cve_id in article.get("cve_ids", []):
-            db.add(CVENewsLink(cve_id=cve_id, article_id=news.id))
+        for cve_id in cve_ids:
+            stmt = (
+                sqlite_insert(CVENewsLink.__table__)
+                .values(cve_id=cve_id, article_id=news.id)
+                .on_conflict_do_nothing(index_elements=["cve_id", "article_id"])
+            )
+            result = db.execute(stmt)
+            new_links += result.rowcount
 
-        existing_urls.add(article["url"])
+        existing[article["url"]] = news.id
         new_count += 1
 
     db.commit()
-    return new_count, skipped
+    return new_count, skipped, new_links

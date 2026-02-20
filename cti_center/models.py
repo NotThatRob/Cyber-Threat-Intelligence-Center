@@ -1,7 +1,7 @@
 from datetime import date
 from typing import Optional
 
-from sqlalchemy import ForeignKey, String, Float, Date, Text
+from sqlalchemy import ForeignKey, String, Float, Date, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from cti_center.database import Base
@@ -39,6 +39,9 @@ class NewsArticle(Base):
 
 class CVENewsLink(Base):
     __tablename__ = "cve_news_links"
+    __table_args__ = (
+        UniqueConstraint("cve_id", "article_id", name="uq_cve_news_link"),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True)
     cve_id: Mapped[str] = mapped_column(String(20), index=True)

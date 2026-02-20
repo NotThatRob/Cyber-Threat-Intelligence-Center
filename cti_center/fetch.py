@@ -6,7 +6,7 @@ Usage:
 
 import logging
 
-from cti_center.database import Base, SessionLocal, engine, upsert_cves, upsert_news
+from cti_center.database import Base, SessionLocal, apply_migrations, engine, upsert_cves, upsert_news
 from cti_center.logging_config import setup_logging
 from cti_center.nvd import fetch_cves
 
@@ -16,6 +16,11 @@ logger = logging.getLogger(__name__)
 def main():
     setup_logging()
     Base.metadata.create_all(bind=engine)
+    _mig_db = SessionLocal()
+    try:
+        apply_migrations(_mig_db)
+    finally:
+        _mig_db.close()
 
     logger.info("Fetching CVEs from NVD...")
     cves = fetch_cves()
@@ -53,8 +58,8 @@ def main():
 
         db = SessionLocal()
         try:
-            new_count, skipped = upsert_news(db, articles)
-            logger.info("  %d new, %d already existed.", new_count, skipped)
+            new_count, skipped, new_links = upsert_news(db, articles)
+            logger.info("  %d new, %d already existed, %d new CVE links.", new_count, skipped, new_links)
         finally:
             db.close()
     except Exception:

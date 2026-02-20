@@ -12,7 +12,7 @@ from jinja2 import select_autoescape
 from sqlalchemy import and_, case, func, or_
 from sqlalchemy.orm import Session
 
-from cti_center.database import Base, SessionLocal, engine, get_db, upsert_cves, upsert_kev, upsert_news
+from cti_center.database import Base, SessionLocal, apply_migrations, engine, get_db, upsert_cves, upsert_kev, upsert_news
 from cti_center.logging_config import setup_logging
 from cti_center.models import CVE, CVENewsLink, NewsArticle
 from cti_center.scoring import RISK_WEIGHTS, score_cves
@@ -33,6 +33,11 @@ if _env_file.exists():
         os.environ.setdefault(key.strip(), value)
 
 Base.metadata.create_all(bind=engine)
+_mig_db = SessionLocal()
+try:
+    apply_migrations(_mig_db)
+finally:
+    _mig_db.close()
 
 app = FastAPI(title="CTI-Center")
 
@@ -106,8 +111,8 @@ def _background_fetch():
         articles = fetch_news()
         db = SessionLocal()
         try:
-            new_count, skipped = upsert_news(db, articles)
-            logger.info("News background fetch: %d new, %d already existed.", new_count, skipped)
+            new_count, skipped, new_links = upsert_news(db, articles)
+            logger.info("News background fetch: %d new, %d already existed, %d new CVE links.", new_count, skipped, new_links)
         finally:
             db.close()
     except Exception:
