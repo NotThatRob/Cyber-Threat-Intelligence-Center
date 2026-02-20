@@ -44,7 +44,11 @@ def upsert_cves(db, cves):
     from cti_center.models import CVE
 
     existing_ids = {row[0] for row in db.query(CVE.cve_id).all()}
-    new_cves = [c for c in cves if c.cve_id not in existing_ids]
+    new_cves = []
+    for c in cves:
+        if c.cve_id not in existing_ids:
+            new_cves.append(c)
+            existing_ids.add(c.cve_id)  # Deduplicate within the batch
     skipped = len(cves) - len(new_cves)
 
     if new_cves:
