@@ -34,11 +34,12 @@ python3 -m venv .venv
 # Linux / macOS
 source .venv/bin/activate
 
-# Windows (PowerShell)
-# .venv\Scripts\Activate.ps1
+# Windows (PowerShell — run once if scripts are disabled:
+#   Set-ExecutionPolicy -Scope CurrentUser RemoteSigned)
+.\.venv\Scripts\Activate.ps1
 
 # Windows (Command Prompt)
-# .venv\Scripts\activate.bat
+.venv\Scripts\activate.bat
 
 pip install -e ".[dev]"
 ```
