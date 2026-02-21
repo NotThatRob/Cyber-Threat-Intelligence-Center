@@ -38,6 +38,9 @@ source .venv/bin/activate
 #   Set-ExecutionPolicy -Scope CurrentUser RemoteSigned)
 .\.venv\Scripts\Activate.ps1
 
+# Windows (PowerShell)
+.venv\Scripts\Activate.ps1
+
 # Windows (Command Prompt)
 .venv\Scripts\activate.bat
 
