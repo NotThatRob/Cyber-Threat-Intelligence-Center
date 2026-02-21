@@ -56,15 +56,26 @@ def _extract_description(descriptions: list) -> str:
 
 
 def _extract_product(affected: list) -> str:
-    """Extract vendor + product from CNA affected array."""
+    """Extract vendor + product from CNA affected array.
+
+    Tries all entries (not just the first) to find one with both
+    vendor and product populated.
+    """
     if not affected:
         return ""
-    entry = affected[0]
-    vendor = entry.get("vendor", "")
-    product = entry.get("product", "")
-    if vendor and product:
-        return f"{vendor} {product}"
-    return product or vendor or ""
+    # First pass: look for an entry with both vendor and product.
+    for entry in affected:
+        vendor = entry.get("vendor", "")
+        product = entry.get("product", "")
+        if vendor and product:
+            return f"{vendor} {product}"
+    # Second pass: return whatever we can find.
+    for entry in affected:
+        product = entry.get("product", "")
+        vendor = entry.get("vendor", "")
+        if product or vendor:
+            return product or vendor
+    return ""
 
 
 def fetch_cve_record(cve_id: str) -> dict | None:

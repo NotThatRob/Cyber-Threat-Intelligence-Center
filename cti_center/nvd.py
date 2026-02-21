@@ -2,6 +2,7 @@
 
 import logging
 import os
+import re
 import time
 from datetime import date, datetime, timedelta, timezone
 
@@ -54,6 +55,108 @@ def _extract_product(configurations: list) -> str:
                     product = parts[4]
                     return f"{vendor} {product}".replace("_", " ")
     return "Unknown"
+
+
+# Verbs/phrases that typically follow the product name in NVD descriptions.
+_PRODUCT_BOUNDARY = re.compile(
+    r"\s+(?:"
+    r"(?:is|are)\s+vulnerable"
+    r"|allows?"
+    r"|enables?"
+    r"|permits?"
+    r"|could\s+allow"
+    r"|has\s+a\b"
+    r"|contains?"
+    r"|(?:before|through|up\s+to)\s+\d"
+    r"|versions?\s"
+    r"|(?:in\s+)?all\s+versions"
+    r"|ships\s+with"
+    r"|discloses?"
+    r"|suffers"
+    r"|(?:the\s+)?following\s+vulnerability"
+    r")",
+    re.IGNORECASE,
+)
+
+# Prefixes to strip before extracting the product subject.
+_SUBJECT_PREFIX = re.compile(
+    r"^(?:A\s+|An\s+)?"
+    r"(?:vulnerability|issue|flaw|bug|weakness|problem)\s+"
+    r"(?:was\s+(?:found|identified|detected|determined)\s+)?in\s+",
+    re.IGNORECASE,
+)
+
+# CWE-style lead-ins: "Improper Neutralization of ... vulnerability in Product"
+_CWE_PREFIX = re.compile(
+    r"^[A-Z][A-Za-z\s,'\-()]+?(?:vulnerability|issue)\s+in\s+",
+    re.IGNORECASE,
+)
+
+# "A flaw has been found in X" / "A vulnerability was identified in X. This ..."
+_FLAW_FOUND_IN = re.compile(
+    r"^(?:A\s+)?(?:vulnerability|flaw|weakness|bug|issue)\s+"
+    r"(?:has\s+been\s+|was\s+)?(?:found|identified|detected|determined|discovered)\s+in\s+"
+    r"(.+?)(?:\.\s|\s+that\s|\s+which\s)",
+    re.IGNORECASE,
+)
+
+# "The X plugin for WordPress" → "WordPress X plugin"
+_WORDPRESS_PLUGIN = re.compile(
+    r"^The\s+(.+?)\s+plugin\s+for\s+WordPress",
+    re.IGNORECASE,
+)
+
+# "In the Linux kernel, ..." or "In Product X, ..."
+_IN_PREFIX = re.compile(r"^In\s+(?:the\s+)?", re.IGNORECASE)
+
+
+def _product_from_description(description: str) -> str:
+    """Best-effort product extraction from the opening of a CVE description.
+
+    Returns "Unknown" if no product can be identified.
+    """
+    if not description:
+        return "Unknown"
+
+    # WordPress plugins are extremely common and follow a consistent pattern.
+    wp = _WORDPRESS_PLUGIN.match(description)
+    if wp:
+        plugin_name = wp.group(1).strip()
+        return f"WordPress {plugin_name}"
+
+    # "A flaw has been found in X." — grab the product before the period.
+    flaw_m = _FLAW_FOUND_IN.match(description)
+    if flaw_m:
+        product = flaw_m.group(1).strip().rstrip(",.")
+        if product and 3 <= len(product) <= 80:
+            return re.sub(r"\s+", " ", product)
+
+    # Strip CWE-style lead-ins: "Improper ... vulnerability in Product allows"
+    text = _CWE_PREFIX.sub("", description)
+
+    # Strip "A vulnerability was found in ..." style prefixes.
+    text = _SUBJECT_PREFIX.sub("", text)
+
+    # Strip "In the ..." prefix.
+    text = _IN_PREFIX.sub("", text)
+
+    # Find where the product name ends and the vulnerability verb begins.
+    m = _PRODUCT_BOUNDARY.search(text)
+    if not m:
+        return "Unknown"
+
+    product = text[: m.start()].strip().rstrip(",.")
+    if not product or len(product) < 3:
+        return "Unknown"
+
+    # Clean up common noise.
+    product = re.sub(r"\s+", " ", product)
+
+    # Avoid returning the entire first sentence if it's too long.
+    if len(product) > 80:
+        return "Unknown"
+
+    return product
 
 
 def _extract_description(descriptions: list) -> str:
@@ -120,6 +223,8 @@ def fetch_cves(days_back: int = 7) -> list[CVE]:
                 cvss_score, severity = _extract_cvss(metrics)
                 description = _extract_description(descriptions)
                 affected_product = _extract_product(configurations)
+                if affected_product == "Unknown":
+                    affected_product = _product_from_description(description)
 
                 published_str = cve_data.get("published", "")
                 try:

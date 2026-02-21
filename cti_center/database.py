@@ -37,6 +37,21 @@ def apply_migrations(db):
         "UPDATE news_articles SET published_date = date('now') "
         "WHERE published_date > date('now')"
     ))
+
+    # Backfill "Unknown" products using description-based extraction.
+    from cti_center.models import CVE
+    from cti_center.nvd import _product_from_description
+
+    unknowns = db.query(CVE).filter(CVE.affected_product == "Unknown").all()
+    backfilled = 0
+    for cve in unknowns:
+        product = _product_from_description(cve.description or "")
+        if product != "Unknown":
+            cve.affected_product = product[:200]
+            backfilled += 1
+    if backfilled:
+        logger.info("Backfilled product for %d CVEs from descriptions.", backfilled)
+
     db.commit()
     logger.info("Migrations applied.")
 

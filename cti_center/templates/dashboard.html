@@ -6,15 +6,29 @@
     <a href="/?tab=recent" class="tab {% if active_tab == 'recent' %}active{% endif %}">Recent</a>
     <a href="/?tab=all" class="tab {% if active_tab == 'all' %}active{% endif %}">All</a>
 </nav>
+{% set ns = namespace(critical=0, high=0, exploited=0, in_news=0) %}
+{% for cve in cves %}
+    {% if cve.severity == 'CRITICAL' %}{% set ns.critical = ns.critical + 1 %}{% endif %}
+    {% if cve.severity == 'HIGH' %}{% set ns.high = ns.high + 1 %}{% endif %}
+    {% if cve.kev_date_added %}{% set ns.exploited = ns.exploited + 1 %}{% endif %}
+    {% if news_counts.get(cve.cve_id) %}{% set ns.in_news = ns.in_news + 1 %}{% endif %}
+{% endfor %}
+<p class="summary-bar">
+    <span class="summary-critical">{{ ns.critical }} Critical</span>
+    <span class="summary-sep">&middot;</span>
+    <span class="summary-high">{{ ns.high }} High</span>
+    <span class="summary-sep">&middot;</span>
+    <span class="summary-exploited">{{ ns.exploited }} Exploited</span>
+    <span class="summary-sep">&middot;</span>
+    <span class="summary-news">{{ ns.in_news }} In News</span>
+</p>
 <table>
     <thead>
         <tr>
             <th>CVE ID</th>
-            <th>Risk Score</th>
+            <th>Risk</th>
             <th>Severity</th>
-            <th>CVSS</th>
             <th>Product</th>
-            <th>Description</th>
             <th>Published</th>
         </tr>
     </thead>
@@ -22,26 +36,24 @@
         {% for cve in cves %}
         {% set rs = risk_scores[cve.cve_id] %}
         <tr class="severity-{{ cve.severity | lower }}">
-            <td>
+            <td class="col-id">
                 <a href="{{ cve.source_url }}" target="_blank" rel="noopener">{{ cve.cve_id }}</a>
                 {% if cve.kev_date_added %}
-                <span class="badge-kev" title="CISA KEV — Due: {{ cve.kev_due_date | format_date(date_fmt) }}{% if cve.kev_ransomware == 'Known' %} | Ransomware: Known{% endif %}">Actively Exploited</span>
+                <span class="badge-kev" title="CISA KEV — Due: {{ cve.kev_due_date | format_date(date_fmt) }}{% if cve.kev_ransomware == 'Known' %} | Ransomware: Known{% endif %}">KEV</span>
                 {% endif %}
                 {% if news_counts.get(cve.cve_id) %}
-                <a href="/news" class="badge-news" title="{{ news_counts[cve.cve_id] }} news article(s)">{{ news_counts[cve.cve_id] }} in news</a>
+                <a href="/news" class="badge-news">{{ news_counts[cve.cve_id] }}</a>
                 {% endif %}
             </td>
             {% set w = risk_weights %}
-            <td><span class="risk-score risk-score-{{ rs.label }}" title="Risk Score Breakdown&#10;&#10;CVSS Base:        {{ rs.cvss_component | round(1) }} / {{ w.cvss | int }}&#10;Exploit Maturity:  {{ rs.exploit_component | round(1) }} / {{ w.exploit | int }}&#10;News Velocity:     {{ rs.news_component | round(1) }} / {{ w.news | int }}&#10;Recency:           {{ rs.recency_component | round(1) }} / {{ w.recency | int }}&#10;KEV Urgency:       {{ rs.urgency_component | round(1) }} / {{ w.urgency | int }}{% if rs.factors %}&#10;&#10;{% for factor in rs.factors %}&#8226; {{ factor }}{% if not loop.last %}&#10;{% endif %}{% endfor %}{% endif %}">{{ rs.score }}</span></td>
-            <td>{{ cve.severity }}</td>
-            <td>{{ cve.cvss_score }}</td>
-            <td>{{ cve.affected_product }}</td>
-            <td>{{ cve.description }}</td>
-            <td>{{ cve.date_published | format_date(date_fmt) }}</td>
+            <td class="col-nowrap"><span class="risk-score risk-score-{{ rs.label }}" title="Risk Score Breakdown&#10;&#10;CVSS Base:        {{ rs.cvss_component | round(1) }} / {{ w.cvss | int }}&#10;Exploit Maturity:  {{ rs.exploit_component | round(1) }} / {{ w.exploit | int }}&#10;News Velocity:     {{ rs.news_component | round(1) }} / {{ w.news | int }}&#10;Recency:           {{ rs.recency_component | round(1) }} / {{ w.recency | int }}&#10;KEV Urgency:       {{ rs.urgency_component | round(1) }} / {{ w.urgency | int }}{% if rs.factors %}&#10;&#10;{% for factor in rs.factors %}&#8226; {{ factor }}{% if not loop.last %}&#10;{% endif %}{% endfor %}{% endif %}">{{ rs.score }}</span></td>
+            <td class="col-nowrap severity-cell">{{ cve.severity }} ({{ cve.cvss_score }})</td>
+            <td class="col-product" title="{{ cve.affected_product }}">{% if cve.affected_product != 'Unknown' %}{{ cve.affected_product | truncate(30, True) }}{% else %}<span class="text-muted" title="{{ cve.description | truncate(200, True) }}">{{ cve.description | truncate(40, True) }}</span>{% endif %}</td>
+            <td class="col-nowrap">{{ cve.date_published | format_date(date_fmt) }}</td>
         </tr>
         {% else %}
         <tr>
-            <td colspan="7" class="empty-state">No CVEs match this filter.</td>
+            <td colspan="5" class="empty-state">No CVEs match this filter.</td>
         </tr>
         {% endfor %}
     </tbody>

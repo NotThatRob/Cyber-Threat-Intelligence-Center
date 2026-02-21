@@ -19,7 +19,7 @@
     <tbody>
         {% for article in articles %}
         <tr>
-            <td><a href="{{ article.url }}" target="_blank" rel="noopener">{{ article.title }}</a></td>
+            <td><a href="{{ article.url }}" target="_blank" rel="noopener" {% if article.summary %}title="{{ article.summary | truncate(200, True) }}"{% endif %}>{{ article.title }}</a></td>
             <td>{{ article.source_name }}</td>
             <td>{{ article.published_date | format_date(date_fmt) }}</td>
             <td>
