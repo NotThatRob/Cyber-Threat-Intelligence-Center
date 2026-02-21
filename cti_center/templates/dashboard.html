@@ -25,7 +25,7 @@
             <td>
                 <a href="{{ cve.source_url }}" target="_blank" rel="noopener">{{ cve.cve_id }}</a>
                 {% if cve.kev_date_added %}
-                <span class="badge-kev" title="CISA KEV — Due: {{ cve.kev_due_date }}{% if cve.kev_ransomware == 'Known' %} | Ransomware: Known{% endif %}">Actively Exploited</span>
+                <span class="badge-kev" title="CISA KEV — Due: {{ cve.kev_due_date | format_date(date_fmt) }}{% if cve.kev_ransomware == 'Known' %} | Ransomware: Known{% endif %}">Actively Exploited</span>
                 {% endif %}
                 {% if news_counts.get(cve.cve_id) %}
                 <a href="/news" class="badge-news" title="{{ news_counts[cve.cve_id] }} news article(s)">{{ news_counts[cve.cve_id] }} in news</a>
@@ -37,7 +37,7 @@
             <td>{{ cve.cvss_score }}</td>
             <td>{{ cve.affected_product }}</td>
             <td>{{ cve.description }}</td>
-            <td>{{ cve.date_published }}</td>
+            <td>{{ cve.date_published | format_date(date_fmt) }}</td>
         </tr>
         {% else %}
         <tr>

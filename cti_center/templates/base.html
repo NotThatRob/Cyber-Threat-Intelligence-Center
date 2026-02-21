@@ -13,6 +13,7 @@
         <nav class="header-nav">
             <a href="/">Dashboard</a>
             <a href="/news">News</a>
+            <a href="/settings/date-format" class="date-toggle" title="Toggle date format">{{ date_fmt | default("us") | upper }}</a>
         </nav>
     </header>
     <main>

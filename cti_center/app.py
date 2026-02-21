@@ -3,8 +3,8 @@ import os
 from datetime import date, timedelta
 from pathlib import Path
 
-from fastapi import Depends, FastAPI, Query, Request
-from fastapi.responses import HTMLResponse
+from fastapi import Cookie, Depends, FastAPI, Query, Request
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from jinja2 import select_autoescape
@@ -52,6 +52,28 @@ if STATIC_DIR.exists():
     app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
 
+# Date format filter — "us" for Feb 21, 2026; "eu" for 21 Feb 2026.
+_DATE_FORMATS = {
+    "us": "%b %d, %Y",   # Feb 21, 2026
+    "eu": "%d %b %Y",    # 21 Feb 2026
+}
+
+
+def _format_date(value, fmt: str = "us") -> str:
+    """Jinja2 filter: format a date object according to the user's preference."""
+    if value is None:
+        return ""
+    if fmt not in _DATE_FORMATS:
+        fmt = "us"
+    try:
+        return value.strftime(_DATE_FORMATS[fmt])
+    except AttributeError:
+        return str(value)
+
+
+templates.env.filters["format_date"] = _format_date
+
+
 @app.on_event("startup")
 def on_startup():
     seed()
@@ -63,11 +85,22 @@ def on_shutdown():
     stop_scheduler()
 
 
+@app.get("/settings/date-format", response_class=HTMLResponse)
+def toggle_date_format(request: Request, date_fmt: str | None = Cookie(None)):
+    """Toggle between American and European date format."""
+    new_fmt = "eu" if date_fmt == "us" else "us"
+    referer = request.headers.get("referer", "/")
+    response = RedirectResponse(url=referer, status_code=303)
+    response.set_cookie("date_fmt", new_fmt, max_age=365 * 24 * 3600)
+    return response
+
+
 @app.get("/", response_class=HTMLResponse)
 def dashboard(
     request: Request,
     tab: str = Query("trending"),
     db: Session = Depends(get_db),
+    date_fmt: str | None = Cookie(None),
 ):
     if tab not in ("trending", "recent", "all"):
         tab = "trending"
@@ -124,9 +157,10 @@ def dashboard(
     if tab == "trending":
         cves = sorted(cves, key=lambda c: risk_scores[c.cve_id].score, reverse=True)
 
+    fmt = date_fmt if date_fmt in ("us", "eu") else "us"
     return templates.TemplateResponse(
         "dashboard.html",
-        {"request": request, "cves": cves, "active_tab": tab, "news_counts": news_counts, "risk_scores": risk_scores, "risk_weights": RISK_WEIGHTS},
+        {"request": request, "cves": cves, "active_tab": tab, "news_counts": news_counts, "risk_scores": risk_scores, "risk_weights": RISK_WEIGHTS, "date_fmt": fmt},
     )
 
 
@@ -135,6 +169,7 @@ def news_page(
     request: Request,
     has_cves: str = Query("all"),
     db: Session = Depends(get_db),
+    date_fmt: str | None = Cookie(None),
 ):
     if has_cves not in ("all", "yes", "no"):
         has_cves = "all"
@@ -179,7 +214,8 @@ def news_page(
         for link in links:
             article_cves.setdefault(link.article_id, []).append(link.cve_id)
 
+    fmt = date_fmt if date_fmt in ("us", "eu") else "us"
     return templates.TemplateResponse(
         "news.html",
-        {"request": request, "articles": articles, "article_cves": article_cves, "has_cves": has_cves},
+        {"request": request, "articles": articles, "article_cves": article_cves, "has_cves": has_cves, "date_fmt": fmt},
     )

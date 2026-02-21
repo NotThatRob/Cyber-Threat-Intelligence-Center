@@ -21,7 +21,7 @@
         <tr>
             <td><a href="{{ article.url }}" target="_blank" rel="noopener">{{ article.title }}</a></td>
             <td>{{ article.source_name }}</td>
-            <td>{{ article.published_date }}</td>
+            <td>{{ article.published_date | format_date(date_fmt) }}</td>
             <td>
                 {% for cve_id in article_cves.get(article.id, []) %}
                 <a href="https://nvd.nist.gov/vuln/detail/{{ cve_id }}" target="_blank" rel="noopener">{{ cve_id }}</a>{% if not loop.last %}, {% endif %}

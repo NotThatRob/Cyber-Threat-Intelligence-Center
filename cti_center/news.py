@@ -245,6 +245,7 @@ def fetch_news(
 
                 # Parse published date
                 published_date = None
+                today = date.today()
                 time_struct = entry.get("published_parsed") or entry.get("updated_parsed")
                 if time_struct:
                     try:
@@ -252,10 +253,18 @@ def fetch_news(
                         if dt < cutoff:
                             continue
                         published_date = dt.date()
+                        # Clamp future dates (e.g. event pages where pubDate
+                        # is the event date rather than the publication date).
+                        if published_date > today:
+                            logger.debug(
+                                "Clamping future date %s to today for: %s",
+                                published_date, url,
+                            )
+                            published_date = today
                     except (ValueError, OverflowError):
-                        published_date = date.today()
+                        published_date = today
                 else:
-                    published_date = date.today()
+                    published_date = today
 
                 title = entry.get("title", "").strip()
                 summary = entry.get("summary", "").strip()
