@@ -31,8 +31,14 @@ def apply_migrations(db):
         "CREATE UNIQUE INDEX IF NOT EXISTS uq_cve_news_link "
         "ON cve_news_links(cve_id, article_id)"
     ))
+    # Clamp any published dates that ended up in the future (e.g. event
+    # pages whose RSS pubDate was the event date, not the publish date).
+    db.execute(text(
+        "UPDATE news_articles SET published_date = date('now') "
+        "WHERE published_date > date('now')"
+    ))
     db.commit()
-    logger.info("Migrations applied (uq_cve_news_link index).")
+    logger.info("Migrations applied.")
 
 
 def upsert_cves(db, cves):
