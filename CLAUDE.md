@@ -17,7 +17,10 @@ See `TODO.md` for the full product roadmap and feature vision.
 
 ```bash
 # Setup
-python3 -m venv .venv && source .venv/bin/activate
+python3 -m venv .venv
+source .venv/bin/activate          # Linux/macOS
+# .venv\Scripts\Activate.ps1       # Windows (PowerShell)
+# .venv\Scripts\activate.bat       # Windows (Command Prompt)
 pip install -e ".[dev]"
 
 # Run dev server

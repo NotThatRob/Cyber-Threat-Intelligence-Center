@@ -30,7 +30,16 @@ Most CVE tools tell you what exists. CTI-Center tells you what matters, and why,
 git clone https://github.com/NotThatRob/Cyber-Threat-Intelligence-Center.git
 cd Cyber-Threat-Intelligence-Center
 python3 -m venv .venv
+
+# Linux / macOS
 source .venv/bin/activate
+
+# Windows (PowerShell)
+# .venv\Scripts\Activate.ps1
+
+# Windows (Command Prompt)
+# .venv\Scripts\activate.bat
+
 pip install -e ".[dev]"
 ```
 

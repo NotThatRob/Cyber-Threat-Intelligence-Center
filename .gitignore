@@ -181,5 +181,8 @@ TODO.md
 *.db
 api.env
 
+# Visual Studio
+.vs/
+
 # Claude
 .claude
