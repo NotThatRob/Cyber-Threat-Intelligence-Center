@@ -11,6 +11,7 @@ Most CVE tools tell you what exists. CTI-Center tells you what matters, and why,
 - **News-Aware Analysis** — Links CVEs to security news articles and surfaces coverage volume as a risk signal. CVEs discussed across multiple sources are ranked higher.
 - **Exploit-First Prioritization** — CVEs actively exploited in the wild, used in ransomware campaigns, or nearing federal remediation deadlines are surfaced above high-CVSS theoretical risks.
 - **Discrepancy Detection** — Flags when CVSS and real-world risk diverge (e.g., "High CVSS but no real-world exploitation observed" or "Low CVSS but actively exploited").
+- **Scheduled Fetching** — Each data source runs on its own conservative schedule with randomized jitter. HTTP conditional requests (ETag/If-Modified-Since) avoid re-downloading unchanged data.
 
 ## Tech Stack
 
@@ -53,7 +54,7 @@ pip install -e ".[dev]"
 uvicorn cti_center.app:app --reload
 ```
 
-Open [http://127.0.0.1:8000](http://127.0.0.1:8000). The database is created and seeded with sample data automatically on first startup. Live CVEs are fetched from all data sources in a background thread.
+Open [http://127.0.0.1:8000](http://127.0.0.1:8000). The database is created and seeded with sample data automatically on first startup. Live CVEs are fetched from all data sources immediately and then re-fetched on a schedule (see [Fetch Schedule](#fetch-schedule)).
 
 ## Data Sources
 
@@ -101,6 +102,22 @@ Articles mentioning CVE IDs are linked to CVEs in the database and displayed on 
 ### MITRE CVE Enrichment
 
 CVEs missing CVSS scores (e.g., KEV-only records) are automatically enriched using the [MITRE CVE Services API](https://www.cve.org/AllResources/CveServices) on startup. This fills in CVSS scores, severity ratings, descriptions, and affected product information.
+
+## Fetch Schedule
+
+Data sources are fetched once immediately on startup, then re-fetched on a staggered schedule. Each job includes randomized jitter so requests don't land at predictable intervals.
+
+| Source | Interval | Jitter | Notes |
+|--------|----------|--------|-------|
+| NVD API | 4 hours | ±10 min | Date-range queries for last 7 days |
+| CISA KEV | 12 hours | ±30 min | HTTP conditional request (ETag/If-Modified-Since) — skips download if unchanged |
+| GitHub Advisories | 6 hours | ±15 min | Date-range queries for last 7 days |
+| RSS News | 2 hours | ±10 min | Per-feed conditional requests — skips unchanged feeds |
+| MITRE Enrichment | 6 hours | ±15 min | Only queries CVEs with missing CVSS scores |
+
+Conditional request state (ETag and Last-Modified headers) is persisted to `data/fetch_state.json` so it survives server restarts.
+
+Manual fetches can still be triggered via `python -m cti_center.fetch` at any time.
 
 ## Risk Scoring
 
@@ -260,7 +277,7 @@ Both can also be set in an `api.env` file in the project root (see [Configuratio
 
 - **SQLite persistence** — The database is a local file (`cti_center.db`). In Docker, mount a volume so data survives container restarts.
 - **No built-in authentication** — CTI-Center does not include user auth. If exposing to the internet, put it behind a reverse proxy with authentication, a VPN, or restrict access by IP.
-- **Background fetches on startup** — Data ingestion runs automatically when the server starts. With multiple workers, each will trigger a fetch. This is safe but redundant; for larger deployments consider running fetches via a separate cron job (`python -m cti_center.fetch`) and disabling the startup fetch.
+- **Scheduled fetches** — Each worker process starts its own APScheduler instance, so with multiple workers you'll get duplicate fetches. For multi-worker deployments, consider running fetches via a separate cron job (`python -m cti_center.fetch`) instead.
 
 ## Logging
 

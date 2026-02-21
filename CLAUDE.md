@@ -51,6 +51,7 @@ NVD_API_KEY=your-key python -m cti_center.fetch
 - `cti_center/mitre.py` — MITRE CVE Services enrichment; looks up individual CVE records to fill CVSS/description gaps in KEV-created or incomplete records
 - `cti_center/scoring.py` — Custom risk re-scoring engine; computes a 0-100 risk score blending CVSS, exploit maturity (KEV), news velocity, recency, and KEV urgency with human-readable factor explanations
 - `cti_center/news.py` — RSS feed client; fetches articles from BleepingComputer, The Hacker News, Dark Reading, and Krebs on Security, extracts CVE IDs via regex, returns structured article dicts
+- `cti_center/scheduler.py` — APScheduler-based background scheduler; runs each data source on a conservative interval with jitter; persists ETag/Last-Modified headers to `data/fetch_state.json` for HTTP conditional requests
 - `cti_center/fetch.py` — CLI entry point (`python -m cti_center.fetch`) for manual NVD, GHSA, and news ingestion
 - `cti_center/seed.py` — Sample data seeder (runs automatically on startup as fallback)
 - `cti_center/templates/` — Jinja2 HTML templates (`base.html` layout, `dashboard.html`, `news.html`)

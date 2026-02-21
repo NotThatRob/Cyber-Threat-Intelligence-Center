@@ -176,6 +176,9 @@ cython_debug/
 # Logs
 logs/
 
+# Fetch state (conditional request headers)
+data/
+
 # Misc
 TODO.md
 *.db

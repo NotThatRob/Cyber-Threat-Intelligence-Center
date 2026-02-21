@@ -19,20 +19,42 @@ def _parse_date(value: str) -> date | None:
         return None
 
 
-def fetch_kev() -> list[dict]:
+def fetch_kev(
+    etag: str | None = None,
+    last_modified: str | None = None,
+) -> tuple[list[dict], dict[str, str]] | None:
     """Download and parse the CISA KEV catalog.
 
+    Args:
+        etag: ETag from a previous response for conditional request.
+        last_modified: Last-Modified from a previous response.
+
     Returns:
-        List of dicts with keys: cve_id, vendor_project, product,
-        vulnerability_name, short_description, date_added, due_date,
-        required_action, ransomware_use, cwes.
+        Tuple of (entries list, response headers dict) on success,
+        or None if the server returned 304 Not Modified.
     """
-    headers = {"User-Agent": USER_AGENT}
+    headers: dict[str, str] = {"User-Agent": USER_AGENT}
+    if etag:
+        headers["If-None-Match"] = etag
+    if last_modified:
+        headers["If-Modified-Since"] = last_modified
 
     with httpx.Client(timeout=30.0) as client:
         response = client.get(KEV_URL, headers=headers)
+
+        if response.status_code == 304:
+            logger.info("KEV: not modified since last fetch, skipping.")
+            return None
+
         response.raise_for_status()
         data = response.json()
+
+    # Capture caching headers for next request.
+    resp_headers = {}
+    if response.headers.get("ETag"):
+        resp_headers["etag"] = response.headers["ETag"]
+    if response.headers.get("Last-Modified"):
+        resp_headers["last_modified"] = response.headers["Last-Modified"]
 
     catalog_version = data.get("catalogVersion", "unknown")
     vulnerabilities = data.get("vulnerabilities", [])
@@ -53,4 +75,4 @@ def fetch_kev() -> list[dict]:
             "cwes": vuln.get("cwes", []),
         })
 
-    return entries
+    return entries, resp_headers

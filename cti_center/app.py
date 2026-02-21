@@ -1,6 +1,5 @@
 import logging
 import os
-import threading
 from datetime import date, timedelta
 from pathlib import Path
 
@@ -12,9 +11,10 @@ from jinja2 import select_autoescape
 from sqlalchemy import and_, case, func, or_
 from sqlalchemy.orm import Session
 
-from cti_center.database import Base, SessionLocal, apply_migrations, engine, get_db, upsert_cves, upsert_kev, upsert_news
+from cti_center.database import Base, SessionLocal, apply_migrations, engine, get_db
 from cti_center.logging_config import setup_logging
 from cti_center.models import CVE, CVENewsLink, NewsArticle
+from cti_center.scheduler import start_scheduler, stop_scheduler
 from cti_center.scoring import RISK_WEIGHTS, score_cves
 from cti_center.seed import seed
 
@@ -52,77 +52,15 @@ if STATIC_DIR.exists():
     app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
 
-def _background_fetch():
-    """Fetch recent CVEs from NVD and KEV catalog in a background thread."""
-    try:
-        from cti_center.nvd import fetch_cves
-
-        cves = fetch_cves()
-        db = SessionLocal()
-        try:
-            new_count, skipped = upsert_cves(db, cves)
-            logger.info("NVD background fetch: %d new, %d already existed.", new_count, skipped)
-        finally:
-            db.close()
-    except Exception:
-        logger.error("NVD background fetch failed.", exc_info=True)
-
-    try:
-        from cti_center.kev import fetch_kev
-
-        kev_entries = fetch_kev()
-        db = SessionLocal()
-        try:
-            updated, created = upsert_kev(db, kev_entries)
-            logger.info("KEV background fetch: %d enriched, %d new.", updated, created)
-        finally:
-            db.close()
-    except Exception:
-        logger.error("KEV background fetch failed.", exc_info=True)
-
-    try:
-        from cti_center.ghsa import fetch_ghsa
-
-        advisories = fetch_ghsa()
-        db = SessionLocal()
-        try:
-            new_count, skipped = upsert_cves(db, advisories)
-            logger.info("GHSA background fetch: %d new, %d already existed.", new_count, skipped)
-        finally:
-            db.close()
-    except Exception:
-        logger.error("GHSA background fetch failed.", exc_info=True)
-
-    try:
-        from cti_center.mitre import enrich_cves
-
-        db = SessionLocal()
-        try:
-            enriched, failed = enrich_cves(db)
-            logger.info("MITRE enrichment: %d enriched, %d failed.", enriched, failed)
-        finally:
-            db.close()
-    except Exception:
-        logger.error("MITRE enrichment failed.", exc_info=True)
-
-    try:
-        from cti_center.news import fetch_news
-
-        articles = fetch_news()
-        db = SessionLocal()
-        try:
-            new_count, skipped, new_links = upsert_news(db, articles)
-            logger.info("News background fetch: %d new, %d already existed, %d new CVE links.", new_count, skipped, new_links)
-        finally:
-            db.close()
-    except Exception:
-        logger.error("News background fetch failed.", exc_info=True)
-
-
 @app.on_event("startup")
 def on_startup():
     seed()
-    threading.Thread(target=_background_fetch, daemon=True).start()
+    start_scheduler()
+
+
+@app.on_event("shutdown")
+def on_shutdown():
+    stop_scheduler()
 
 
 @app.get("/", response_class=HTMLResponse)

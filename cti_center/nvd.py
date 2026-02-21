@@ -12,6 +12,7 @@ from cti_center.models import CVE
 logger = logging.getLogger(__name__)
 
 NVD_API_URL = "https://services.nvd.nist.gov/rest/json/cves/2.0"
+USER_AGENT = "CTI-Center/0.1 (vulnerability-aggregator)"
 
 
 def _parse_severity(cvss_score: float) -> str:
@@ -89,7 +90,7 @@ def fetch_cves(days_back: int = 7) -> list[CVE]:
         "startIndex": 0,
     }
 
-    headers = {}
+    headers = {"User-Agent": USER_AGENT}
     if api_key:
         headers["apiKey"] = api_key
 

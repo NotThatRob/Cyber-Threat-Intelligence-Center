@@ -53,7 +53,7 @@ def main():
     try:
         from cti_center.news import fetch_news
 
-        articles = fetch_news()
+        articles, _feed_state = fetch_news()
         logger.info("Fetched %d articles from RSS feeds.", len(articles))
 
         db = SessionLocal()

@@ -176,16 +176,21 @@ def _get_content_encoded(entry) -> str:
     return ""
 
 
-def fetch_news(days_back: int = 7) -> list[dict]:
+def fetch_news(
+    days_back: int = 7,
+    feed_state: dict[str, dict[str, str]] | None = None,
+) -> tuple[list[dict], dict[str, dict[str, str]]]:
     """Fetch recent articles from RSS feeds.
 
     Args:
         days_back: Only include articles published within this many days.
+        feed_state: Per-feed dict of ``{"etag": ..., "last_modified": ...}``
+            from a previous fetch, used for conditional requests.
 
     Returns:
-        List of dicts with keys: url, title, source_name, published_date,
-        summary, cve_ids.
+        Tuple of (articles list, updated feed_state dict).
     """
+    feed_state = feed_state or {}
     cutoff = datetime.now(timezone.utc).replace(
         hour=0, minute=0, second=0, microsecond=0
     ) - timedelta(days=days_back)
@@ -197,18 +202,39 @@ def fetch_news(days_back: int = 7) -> list[dict]:
     last_page_fetch_time = 0.0
     robots_cache: dict[str, urllib.robotparser.RobotFileParser] = {}
 
+    updated_state: dict[str, dict[str, str]] = {}
+
     with httpx.Client(timeout=30.0, follow_redirects=True) as client:
         for source_name, feed_url in RSS_FEEDS.items():
             logger.info("Fetching RSS feed: %s", source_name)
+
+            req_headers: dict[str, str] = {"User-Agent": USER_AGENT}
+            prev = feed_state.get(source_name, {})
+            if prev.get("etag"):
+                req_headers["If-None-Match"] = prev["etag"]
+            if prev.get("last_modified"):
+                req_headers["If-Modified-Since"] = prev["last_modified"]
+
             try:
-                response = client.get(
-                    feed_url,
-                    headers={"User-Agent": USER_AGENT},
-                )
+                response = client.get(feed_url, headers=req_headers)
+
+                if response.status_code == 304:
+                    logger.info("RSS %s: not modified since last fetch, skipping.", source_name)
+                    updated_state[source_name] = prev
+                    continue
+
                 response.raise_for_status()
             except httpx.HTTPError:
                 logger.error("Failed to fetch feed: %s", source_name, exc_info=True)
                 continue
+
+            # Save caching headers for next request.
+            new_state: dict[str, str] = {}
+            if response.headers.get("ETag"):
+                new_state["etag"] = response.headers["ETag"]
+            if response.headers.get("Last-Modified"):
+                new_state["last_modified"] = response.headers["Last-Modified"]
+            updated_state[source_name] = new_state
 
             feed = feedparser.parse(response.text)
 
@@ -300,4 +326,4 @@ def fetch_news(days_back: int = 7) -> list[dict]:
         "News fetch complete: %d articles in %.1fs (%d full-page fetches).",
         len(articles), elapsed, page_fetch_count,
     )
-    return articles
+    return articles, updated_state
