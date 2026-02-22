@@ -11,23 +11,12 @@ import httpx
 from sqlalchemy.orm import Session
 
 from cti_center.models import CVE
+from cti_center.utils import parse_severity as _parse_severity
 
 logger = logging.getLogger(__name__)
 
 MITRE_CVE_API = "https://cveawg.mitre.org/api/cve"
 USER_AGENT = "CTI-Center/0.1 (vulnerability-aggregator)"
-
-
-def _parse_severity(cvss_score: float) -> str:
-    if cvss_score >= 9.0:
-        return "CRITICAL"
-    if cvss_score >= 7.0:
-        return "HIGH"
-    if cvss_score >= 4.0:
-        return "MEDIUM"
-    if cvss_score > 0:
-        return "LOW"
-    return "NONE"
 
 
 def _extract_cvss(metrics: list) -> tuple[float, str]:
@@ -160,6 +149,11 @@ def enrich_cves(db: Session, limit: int = 50) -> tuple[int, int]:
         time.sleep(1.0)
 
     if enriched > 0:
-        db.commit()
+        try:
+            db.commit()
+        except Exception:
+            logger.error("Failed to commit MITRE enrichment changes.", exc_info=True)
+            db.rollback()
+            return 0, failed + enriched
 
     return enriched, failed

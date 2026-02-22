@@ -44,5 +44,5 @@ class CVENewsLink(Base):
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    cve_id: Mapped[str] = mapped_column(String(20), index=True)
+    cve_id: Mapped[str] = mapped_column(String(20), ForeignKey("cves.cve_id"), index=True)
     article_id: Mapped[int] = mapped_column(ForeignKey("news_articles.id"), index=True)

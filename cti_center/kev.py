@@ -49,12 +49,12 @@ def fetch_kev(
         response.raise_for_status()
         data = response.json()
 
-    # Capture caching headers for next request.
-    resp_headers = {}
-    if response.headers.get("ETag"):
-        resp_headers["etag"] = response.headers["ETag"]
-    if response.headers.get("Last-Modified"):
-        resp_headers["last_modified"] = response.headers["Last-Modified"]
+        # Capture caching headers while the response is still in scope.
+        resp_headers = {}
+        if response.headers.get("ETag"):
+            resp_headers["etag"] = response.headers["ETag"]
+        if response.headers.get("Last-Modified"):
+            resp_headers["last_modified"] = response.headers["Last-Modified"]
 
     catalog_version = data.get("catalogVersion", "unknown")
     vulnerabilities = data.get("vulnerabilities", [])

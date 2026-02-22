@@ -10,6 +10,7 @@ from fastapi.templating import Jinja2Templates
 from jinja2 import select_autoescape
 from sqlalchemy import and_, case, func, or_
 from sqlalchemy.orm import Session
+from starlette.middleware.base import BaseHTTPMiddleware
 
 from cti_center.database import Base, SessionLocal, apply_migrations, engine, get_db
 from cti_center.logging_config import setup_logging
@@ -40,6 +41,18 @@ finally:
     _mig_db.close()
 
 app = FastAPI(title="CTI-Center")
+
+
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request, call_next):
+        response = await call_next(request)
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        return response
+
+
+app.add_middleware(SecurityHeadersMiddleware)
 
 BASE_DIR = Path(__file__).resolve().parent
 templates = Jinja2Templates(
@@ -90,7 +103,18 @@ def toggle_date_format(request: Request, date_fmt: str | None = Cookie(None)):
     """Toggle between American and European date format."""
     new_fmt = "eu" if date_fmt == "us" else "us"
     referer = request.headers.get("referer", "/")
-    response = RedirectResponse(url=referer, status_code=303)
+    # Prevent open-redirect: only allow relative paths or same-origin URLs.
+    if referer.startswith("/") and not referer.startswith("//"):
+        redirect_url = referer
+    else:
+        from urllib.parse import urlparse
+        parsed = urlparse(referer)
+        base = urlparse(str(request.base_url))
+        if parsed.netloc and parsed.netloc == base.netloc:
+            redirect_url = referer
+        else:
+            redirect_url = "/"
+    response = RedirectResponse(url=redirect_url, status_code=303)
     response.set_cookie("date_fmt", new_fmt, max_age=365 * 24 * 3600)
     return response
 

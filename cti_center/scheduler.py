@@ -17,6 +17,7 @@ headers survive server restarts.
 
 import json
 import logging
+import threading
 from pathlib import Path
 
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -26,6 +27,7 @@ from cti_center.database import SessionLocal, upsert_cves, upsert_kev, upsert_ne
 logger = logging.getLogger(__name__)
 
 _STATE_FILE = Path(__file__).resolve().parent.parent / "data" / "fetch_state.json"
+_state_lock = threading.Lock()
 
 scheduler = BackgroundScheduler(daemon=True)
 
@@ -35,6 +37,7 @@ scheduler = BackgroundScheduler(daemon=True)
 # ---------------------------------------------------------------------------
 
 def _load_state() -> dict:
+    """Load fetch state from disk. Must be called while holding _state_lock."""
     if _STATE_FILE.exists():
         try:
             return json.loads(_STATE_FILE.read_text())
@@ -44,6 +47,7 @@ def _load_state() -> dict:
 
 
 def _save_state(state: dict) -> None:
+    """Save fetch state to disk. Must be called while holding _state_lock."""
     _STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
     _STATE_FILE.write_text(json.dumps(state, indent=2))
 
@@ -73,8 +77,9 @@ def _job_kev() -> None:
     try:
         from cti_center.kev import fetch_kev
 
-        state = _load_state()
-        kev_state = state.get("kev", {})
+        with _state_lock:
+            state = _load_state()
+            kev_state = state.get("kev", {})
 
         result = fetch_kev(
             etag=kev_state.get("etag"),
@@ -94,8 +99,10 @@ def _job_kev() -> None:
             db.close()
 
         # Persist caching headers for next request.
-        state["kev"] = resp_headers
-        _save_state(state)
+        with _state_lock:
+            state = _load_state()
+            state["kev"] = resp_headers
+            _save_state(state)
     except Exception:
         logger.error("KEV scheduled fetch failed.", exc_info=True)
 
@@ -136,8 +143,9 @@ def _job_news() -> None:
     try:
         from cti_center.news import fetch_news
 
-        state = _load_state()
-        feed_state = state.get("news_feeds", {})
+        with _state_lock:
+            state = _load_state()
+            feed_state = state.get("news_feeds", {})
 
         articles, updated_feed_state = fetch_news(feed_state=feed_state)
 
@@ -151,8 +159,10 @@ def _job_news() -> None:
         finally:
             db.close()
 
-        state["news_feeds"] = updated_feed_state
-        _save_state(state)
+        with _state_lock:
+            state = _load_state()
+            state["news_feeds"] = updated_feed_state
+            _save_state(state)
     except Exception:
         logger.error("News scheduled fetch failed.", exc_info=True)
 
@@ -186,6 +196,7 @@ def start_scheduler() -> None:
         jitter=600,          # ±10 minutes
         id="nvd",
         name="NVD fetch",
+        max_instances=1,
     )
     scheduler.add_job(
         _job_kev,
@@ -194,6 +205,7 @@ def start_scheduler() -> None:
         jitter=1800,         # ±30 minutes
         id="kev",
         name="KEV fetch",
+        max_instances=1,
     )
     scheduler.add_job(
         _job_ghsa,
@@ -202,6 +214,7 @@ def start_scheduler() -> None:
         jitter=900,          # ±15 minutes
         id="ghsa",
         name="GHSA fetch",
+        max_instances=1,
     )
     scheduler.add_job(
         _job_news,
@@ -210,6 +223,7 @@ def start_scheduler() -> None:
         jitter=600,          # ±10 minutes
         id="news",
         name="News fetch",
+        max_instances=1,
     )
     # MITRE enrichment runs every 6 hours (after CVE sources may have added
     # new records with missing CVSS).
@@ -220,6 +234,7 @@ def start_scheduler() -> None:
         jitter=900,
         id="mitre",
         name="MITRE enrichment",
+        max_instances=1,
     )
 
     scheduler.start()

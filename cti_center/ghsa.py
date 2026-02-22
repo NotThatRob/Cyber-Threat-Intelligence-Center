@@ -8,23 +8,12 @@ from datetime import date, datetime, timedelta, timezone
 import httpx
 
 from cti_center.models import CVE
+from cti_center.utils import parse_severity as _parse_severity
 
 logger = logging.getLogger(__name__)
 
 GHSA_API_URL = "https://api.github.com/advisories"
 USER_AGENT = "CTI-Center/0.1 (vulnerability-aggregator)"
-
-
-def _parse_severity(cvss_score: float) -> str:
-    if cvss_score >= 9.0:
-        return "CRITICAL"
-    if cvss_score >= 7.0:
-        return "HIGH"
-    if cvss_score >= 4.0:
-        return "MEDIUM"
-    if cvss_score > 0:
-        return "LOW"
-    return "NONE"
 
 
 def _extract_affected_product(advisory: dict) -> str:
@@ -107,7 +96,8 @@ def fetch_ghsa(days_back: int = 7) -> list[CVE]:
                         published_str.replace("Z", "+00:00")
                     ).date()
                 except (ValueError, AttributeError):
-                    date_published = date.today()
+                    logger.warning("Unparseable published date for %s: %r", cve_id, published_str)
+                    date_published = date(2000, 1, 1)
 
                 source_url = advisory.get("html_url", f"https://nvd.nist.gov/vuln/detail/{cve_id}")
 

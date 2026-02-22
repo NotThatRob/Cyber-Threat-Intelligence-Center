@@ -8,7 +8,11 @@ logger = logging.getLogger(__name__)
 
 DATABASE_URL = "sqlite:///cti_center.db"
 
-engine = create_engine(DATABASE_URL, echo=False)
+engine = create_engine(
+    DATABASE_URL,
+    echo=False,
+    connect_args={"check_same_thread": False, "timeout": 30},
+)
 SessionLocal = sessionmaker(bind=engine)
 
 
@@ -89,7 +93,11 @@ def upsert_kev(db, kev_entries):
 
     from cti_center.models import CVE
 
-    existing = {row.cve_id: row for row in db.query(CVE).all()}
+    kev_cve_ids = [e["cve_id"] for e in kev_entries if e.get("cve_id")]
+    existing = {
+        row.cve_id: row
+        for row in db.query(CVE).filter(CVE.cve_id.in_(kev_cve_ids)).all()
+    } if kev_cve_ids else {}
     updated = 0
     created = 0
 
