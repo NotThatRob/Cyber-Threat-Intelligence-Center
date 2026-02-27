@@ -13,7 +13,8 @@ a:hover { color: #d8b4fe; text-decoration: underline; }
 .header-nav { margin-top: 0.5rem; display: flex; gap: 1.25rem; align-items: center; }
 .header-nav a { color: #7a7290; font-size: 0.82rem; letter-spacing: 0.02em; transition: color 0.15s; }
 .header-nav a:hover { color: #e0dce8; text-decoration: none; }
-.date-toggle { margin-left: auto; padding: 0.2rem 0.5rem; font-size: 0.65rem; font-weight: 700; font-family: 'JetBrains Mono', monospace; border: 1px solid #2d2640; border-radius: 3px; transition: border-color 0.15s, color 0.15s; }
+.last-updated { margin-left: auto; color: #4a4360; font-size: 0.72rem; cursor: help; }
+.date-toggle { padding: 0.2rem 0.5rem; font-size: 0.65rem; font-weight: 700; font-family: 'JetBrains Mono', monospace; border: 1px solid #2d2640; border-radius: 3px; transition: border-color 0.15s, color 0.15s; }
 .date-toggle:hover { border-color: #c084fc; }
 .tabs { display: flex; gap: 0; border-bottom: 1px solid #1a1726; margin-bottom: 0.75rem; }
 .tab { padding: 0.5rem 0.85rem; color: #7a7290; text-decoration: none; border-bottom: 2px solid transparent; font-size: 0.82rem; letter-spacing: 0.01em; transition: color 0.15s, border-color 0.15s; }

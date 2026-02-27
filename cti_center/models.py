@@ -25,6 +25,9 @@ class CVE(Base):
     kev_ransomware: Mapped[Optional[str]] = mapped_column(String(20), nullable=True, default=None)
     kev_required_action: Mapped[Optional[str]] = mapped_column(Text, nullable=True, default=None)
 
+    # CWE weakness classification (comma-separated, e.g. "CWE-79, CWE-89")
+    cwe_ids: Mapped[Optional[str]] = mapped_column(Text, nullable=True, default=None)
+
 
 class NewsArticle(Base):
     __tablename__ = "news_articles"

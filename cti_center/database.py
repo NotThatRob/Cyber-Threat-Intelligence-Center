@@ -35,6 +35,11 @@ def apply_migrations(db):
         "CREATE UNIQUE INDEX IF NOT EXISTS uq_cve_news_link "
         "ON cve_news_links(cve_id, article_id)"
     ))
+    # Add cwe_ids column if it doesn't exist yet (SQLite-safe).
+    existing_cols = {row[1] for row in db.execute(text("PRAGMA table_info(cves)")).fetchall()}
+    if "cwe_ids" not in existing_cols:
+        db.execute(text("ALTER TABLE cves ADD COLUMN cwe_ids TEXT"))
+        logger.info("Migration: added cwe_ids column to cves table.")
     # Clamp any published dates that ended up in the future (e.g. event
     # pages whose RSS pubDate was the event date, not the publish date).
     db.execute(text(
@@ -106,12 +111,17 @@ def upsert_kev(db, kev_entries):
         if not cve_id:
             continue
 
+        cwes = entry.get("cwes") or []
+        cwe_str = ", ".join(cwes) if cwes else None
+
         if cve_id in existing:
             cve = existing[cve_id]
             cve.kev_date_added = entry["date_added"]
             cve.kev_due_date = entry["due_date"]
             cve.kev_ransomware = entry["ransomware_use"]
             cve.kev_required_action = entry["required_action"]
+            if cwe_str and not cve.cwe_ids:
+                cve.cwe_ids = cwe_str
             updated += 1
         else:
             vendor = entry["vendor_project"]
@@ -131,6 +141,7 @@ def upsert_kev(db, kev_entries):
                 kev_due_date=entry["due_date"],
                 kev_ransomware=entry["ransomware_use"],
                 kev_required_action=entry["required_action"],
+                cwe_ids=cwe_str,
             )
             db.add(cve)
             created += 1

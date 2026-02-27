@@ -1,6 +1,6 @@
 import logging
 import os
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 from fastapi import Cookie, Depends, FastAPI, Query, Request
@@ -15,7 +15,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from cti_center.database import Base, SessionLocal, apply_migrations, engine, get_db
 from cti_center.logging_config import setup_logging
 from cti_center.models import CVE, CVENewsLink, NewsArticle
-from cti_center.scheduler import start_scheduler, stop_scheduler
+from cti_center.scheduler import get_last_updated, start_scheduler, stop_scheduler
 from cti_center.scoring import RISK_WEIGHTS, compute_risk_score, score_cves
 from cti_center.seed import seed
 
@@ -85,6 +85,32 @@ def _format_date(value, fmt: str = "us") -> str:
 
 
 templates.env.filters["format_date"] = _format_date
+
+
+def _time_ago(value) -> str:
+    """Jinja2 filter: convert a datetime to a human-readable relative string."""
+    if value is None:
+        return ""
+    now = datetime.now(timezone.utc)
+    if value.tzinfo is None:
+        value = value.replace(tzinfo=timezone.utc)
+    delta = now - value
+    minutes = int(delta.total_seconds() // 60)
+    if minutes < 1:
+        return "just now"
+    if minutes < 60:
+        return f"{minutes}m ago"
+    hours = minutes // 60
+    if hours < 24:
+        return f"{hours}h ago"
+    days = hours // 24
+    return f"{days}d ago"
+
+
+templates.env.filters["time_ago"] = _time_ago
+
+
+templates.env.globals["get_last_updated"] = get_last_updated
 
 
 @app.on_event("startup")

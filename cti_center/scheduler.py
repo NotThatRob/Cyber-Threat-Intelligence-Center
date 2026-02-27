@@ -18,6 +18,7 @@ headers survive server restarts.
 import json
 import logging
 import threading
+from datetime import datetime, timezone
 from pathlib import Path
 
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -52,6 +53,27 @@ def _save_state(state: dict) -> None:
     _STATE_FILE.write_text(json.dumps(state, indent=2))
 
 
+def _mark_updated() -> None:
+    """Record the current time as the last successful data update."""
+    with _state_lock:
+        state = _load_state()
+        state["last_updated"] = datetime.now(timezone.utc).isoformat()
+        _save_state(state)
+
+
+def get_last_updated() -> datetime | None:
+    """Return the timestamp of the last successful data fetch, or None."""
+    with _state_lock:
+        state = _load_state()
+    ts = state.get("last_updated")
+    if ts:
+        try:
+            return datetime.fromisoformat(ts)
+        except (ValueError, TypeError):
+            return None
+    return None
+
+
 # ---------------------------------------------------------------------------
 # Individual source fetch jobs
 # ---------------------------------------------------------------------------
@@ -68,6 +90,7 @@ def _job_nvd() -> None:
             logger.info("NVD scheduled fetch: %d new, %d already existed.", new_count, skipped)
         finally:
             db.close()
+        _mark_updated()
     except Exception:
         logger.error("NVD scheduled fetch failed.", exc_info=True)
 
@@ -103,6 +126,7 @@ def _job_kev() -> None:
             state = _load_state()
             state["kev"] = resp_headers
             _save_state(state)
+        _mark_updated()
     except Exception:
         logger.error("KEV scheduled fetch failed.", exc_info=True)
 
@@ -119,6 +143,7 @@ def _job_ghsa() -> None:
             logger.info("GHSA scheduled fetch: %d new, %d already existed.", new_count, skipped)
         finally:
             db.close()
+        _mark_updated()
     except Exception:
         logger.error("GHSA scheduled fetch failed.", exc_info=True)
 
@@ -134,6 +159,7 @@ def _job_mitre() -> None:
             logger.info("MITRE enrichment: %d enriched, %d failed.", enriched, failed)
         finally:
             db.close()
+        _mark_updated()
     except Exception:
         logger.error("MITRE enrichment failed.", exc_info=True)
 
@@ -163,6 +189,7 @@ def _job_news() -> None:
             state = _load_state()
             state["news_feeds"] = updated_feed_state
             _save_state(state)
+        _mark_updated()
     except Exception:
         logger.error("News scheduled fetch failed.", exc_info=True)
 
