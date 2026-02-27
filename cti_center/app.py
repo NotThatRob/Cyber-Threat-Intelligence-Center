@@ -49,6 +49,11 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        response.headers["Content-Security-Policy"] = (
+            "default-src 'self'; "
+            "style-src 'self' https://fonts.googleapis.com; "
+            "font-src https://fonts.gstatic.com"
+        )
         return response
 
 
@@ -149,7 +154,7 @@ def toggle_date_format(request: Request, date_fmt: str | None = Cookie(None)):
 def dashboard(
     request: Request,
     tab: str = Query("trending"),
-    q: str = Query(""),
+    q: str = Query("", max_length=200),
     db: Session = Depends(get_db),
     date_fmt: str | None = Cookie(None),
 ):
@@ -192,12 +197,13 @@ def dashboard(
         query = db.query(CVE).order_by(CVE.date_published.desc())
 
     if q:
-        pattern = f"%{q}%"
+        q_escaped = q.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+        pattern = f"%{q_escaped}%"
         query = query.filter(
             or_(
-                CVE.cve_id.ilike(pattern),
-                CVE.affected_product.ilike(pattern),
-                CVE.description.ilike(pattern),
+                CVE.cve_id.ilike(pattern, escape="\\"),
+                CVE.affected_product.ilike(pattern, escape="\\"),
+                CVE.description.ilike(pattern, escape="\\"),
             )
         )
 
