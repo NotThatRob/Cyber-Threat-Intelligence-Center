@@ -86,8 +86,8 @@ def _job_nvd() -> None:
         cves = fetch_cves()
         db = SessionLocal()
         try:
-            new_count, skipped = upsert_cves(db, cves)
-            logger.info("NVD scheduled fetch: %d new, %d already existed.", new_count, skipped)
+            new_count, updated = upsert_cves(db, cves)
+            logger.info("NVD scheduled fetch: %d new, %d updated.", new_count, updated)
         finally:
             db.close()
         _mark_updated()
@@ -139,8 +139,8 @@ def _job_ghsa() -> None:
         advisories = fetch_ghsa()
         db = SessionLocal()
         try:
-            new_count, skipped = upsert_cves(db, advisories)
-            logger.info("GHSA scheduled fetch: %d new, %d already existed.", new_count, skipped)
+            new_count, updated = upsert_cves(db, advisories)
+            logger.info("GHSA scheduled fetch: %d new, %d updated.", new_count, updated)
         finally:
             db.close()
         _mark_updated()

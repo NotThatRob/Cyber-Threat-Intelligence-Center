@@ -48,7 +48,7 @@
                 <span class="badge-kev" title="CISA KEV — Due: {{ cve.kev_due_date | format_date(date_fmt) }}{% if cve.kev_ransomware == 'Known' %} | Ransomware: Known{% endif %}">KEV</span>
                 {% endif %}
                 {% if news_counts.get(cve.cve_id) %}
-                <a href="/news" class="badge-news">{{ news_counts[cve.cve_id] }}</a>
+                <a href="/cve/{{ cve.cve_id }}" class="badge-news">{{ news_counts[cve.cve_id] }}</a>
                 {% endif %}
             </td>
             {% set w = risk_weights %}
@@ -64,4 +64,11 @@
         {% endfor %}
     </tbody>
 </table>
+{% if total_pages > 1 %}
+<nav class="pagination">
+    {% if page > 1 %}<a href="/?tab={{ active_tab }}&page={{ page - 1 }}{% if q %}&q={{ q }}{% endif %}">&larr; Prev</a>{% endif %}
+    <span class="page-info">Page {{ page }} of {{ total_pages }}</span>
+    {% if page < total_pages %}<a href="/?tab={{ active_tab }}&page={{ page + 1 }}{% if q %}&q={{ q }}{% endif %}">Next &rarr;</a>{% endif %}
+</nav>
+{% endif %}
 {% endblock %}

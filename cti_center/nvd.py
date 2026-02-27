@@ -17,18 +17,19 @@ NVD_API_URL = "https://services.nvd.nist.gov/rest/json/cves/2.0"
 USER_AGENT = "CTI-Center/0.1 (vulnerability-aggregator)"
 
 
-def _extract_cvss(metrics: dict) -> tuple[float, str]:
-    """Extract CVSS score and severity from NVD metrics object."""
+def _extract_cvss(metrics: dict) -> tuple[float, str, str]:
+    """Extract CVSS score, severity, and vector string from NVD metrics object."""
     for key in ("cvssMetricV31", "cvssMetricV30", "cvssMetricV2"):
         metric_list = metrics.get(key)
         if metric_list:
             cvss_data = metric_list[0].get("cvssData", {})
             score = cvss_data.get("baseScore", 0.0)
             severity = cvss_data.get("baseSeverity", "")
+            vector = cvss_data.get("vectorString", "")
             if not severity:
                 severity = _parse_severity(score)
-            return float(score), severity.upper()
-    return 0.0, "NONE"
+            return float(score), severity.upper(), vector
+    return 0.0, "NONE", ""
 
 
 def _extract_product(configurations: list) -> str:
@@ -209,7 +210,7 @@ def fetch_cves(days_back: int = 7) -> list[CVE]:
                 metrics = cve_data.get("metrics", {})
                 configurations = cve_data.get("configurations", [])
 
-                cvss_score, severity = _extract_cvss(metrics)
+                cvss_score, severity, cvss_vector = _extract_cvss(metrics)
                 description = _extract_description(descriptions)
                 affected_product = _extract_product(configurations)
                 if affected_product == "Unknown":
@@ -231,6 +232,7 @@ def fetch_cves(days_back: int = 7) -> list[CVE]:
                         cve_id=cve_id,
                         description=description[:2000],
                         cvss_score=cvss_score,
+                        cvss_vector=cvss_vector,
                         severity=severity,
                         affected_product=affected_product[:200],
                         date_published=date_published,

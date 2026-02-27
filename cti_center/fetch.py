@@ -28,8 +28,8 @@ def main():
 
     db = SessionLocal()
     try:
-        new_count, skipped = upsert_cves(db, cves)
-        logger.info("  %d new, %d already existed.", new_count, skipped)
+        new_count, updated = upsert_cves(db, cves)
+        logger.info("  %d new, %d updated.", new_count, updated)
     finally:
         db.close()
 
@@ -42,8 +42,8 @@ def main():
 
         db = SessionLocal()
         try:
-            new_count, skipped = upsert_cves(db, advisories)
-            logger.info("  %d new, %d already existed.", new_count, skipped)
+            new_count, updated = upsert_cves(db, advisories)
+            logger.info("  %d new, %d updated.", new_count, updated)
         finally:
             db.close()
     except Exception:

@@ -11,6 +11,7 @@
 <p class="detail-description">{{ cve.description }}</p>
 <div class="detail-meta">
     <div><span class="meta-label">Severity</span> <span class="severity-{{ cve.severity | lower }}-text">{{ cve.severity }} ({{ cve.cvss_score }})</span></div>
+    {% if cve.cvss_vector %}<div><span class="meta-label">Vector</span> <span class="cvss-vector">{{ cve.cvss_vector }}</span></div>{% endif %}
     <div><span class="meta-label">Published</span> {{ cve.date_published | format_date(date_fmt) }}</div>
     <div><span class="meta-label">Product</span> {{ cve.affected_product }}</div>
     <div><span class="meta-label">Source</span> <a href="{{ cve.source_url }}" target="_blank" rel="noopener">View on NVD &rarr;</a></div>

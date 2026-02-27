@@ -40,6 +40,9 @@ def apply_migrations(db):
     if "cwe_ids" not in existing_cols:
         db.execute(text("ALTER TABLE cves ADD COLUMN cwe_ids TEXT"))
         logger.info("Migration: added cwe_ids column to cves table.")
+    if "cvss_vector" not in existing_cols:
+        db.execute(text("ALTER TABLE cves ADD COLUMN cvss_vector VARCHAR(200)"))
+        logger.info("Migration: added cvss_vector column to cves table.")
     # Clamp any published dates that ended up in the future (e.g. event
     # pages whose RSS pubDate was the event date, not the publish date).
     db.execute(text(
@@ -66,26 +69,62 @@ def apply_migrations(db):
 
 
 def upsert_cves(db, cves):
-    """Insert new CVEs, skipping any that already exist by cve_id.
+    """Insert new CVEs or update stale existing records.
+
+    Updates CVSS, description, product, and vector when incoming data
+    is better than what we already have (e.g., NVD scored a CVE that
+    was previously ingested at CVSS 0.0).
 
     Returns:
-        Tuple of (new_count, skipped_count).
+        Tuple of (new_count, updated_count).
     """
     from cti_center.models import CVE
 
-    existing_ids = {row[0] for row in db.query(CVE.cve_id).all()}
-    new_cves = []
+    # Deduplicate incoming batch (keep first occurrence).
+    seen: set[str] = set()
+    unique_cves = []
     for c in cves:
-        if c.cve_id not in existing_ids:
-            new_cves.append(c)
-            existing_ids.add(c.cve_id)  # Deduplicate within the batch
-    skipped = len(cves) - len(new_cves)
+        if c.cve_id not in seen:
+            unique_cves.append(c)
+            seen.add(c.cve_id)
 
-    if new_cves:
-        db.add_all(new_cves)
-        db.commit()
+    incoming_ids = [c.cve_id for c in unique_cves]
+    existing = {
+        row.cve_id: row
+        for row in db.query(CVE).filter(CVE.cve_id.in_(incoming_ids)).all()
+    } if incoming_ids else {}
 
-    return len(new_cves), skipped
+    new_count = 0
+    updated = 0
+    for c in unique_cves:
+        if c.cve_id in existing:
+            row = existing[c.cve_id]
+            changed = False
+            # Update CVSS if incoming has a real score and it differs.
+            if c.cvss_score > 0 and c.cvss_score != row.cvss_score:
+                row.cvss_score = c.cvss_score
+                row.severity = c.severity
+                changed = True
+            # Update description if incoming is meaningful and current is placeholder.
+            if c.description and c.description != "No description available." and c.description != row.description:
+                row.description = c.description
+                changed = True
+            # Update product if incoming is known and current is unknown.
+            if c.affected_product not in ("Unknown", "") and row.affected_product in ("Unknown", ""):
+                row.affected_product = c.affected_product
+                changed = True
+            # Update vector if incoming has one and current doesn't.
+            if getattr(c, "cvss_vector", None) and not row.cvss_vector:
+                row.cvss_vector = c.cvss_vector
+                changed = True
+            if changed:
+                updated += 1
+        else:
+            db.add(c)
+            new_count += 1
+
+    db.commit()
+    return new_count, updated
 
 
 def upsert_kev(db, kev_entries):

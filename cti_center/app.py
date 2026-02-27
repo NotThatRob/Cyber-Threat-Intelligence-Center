@@ -155,6 +155,7 @@ def dashboard(
     request: Request,
     tab: str = Query("trending"),
     q: str = Query("", max_length=200),
+    page: int = Query(1, ge=1),
     db: Session = Depends(get_db),
     date_fmt: str | None = Cookie(None),
 ):
@@ -207,6 +208,15 @@ def dashboard(
             )
         )
 
+    # Paginate the "all" tab (trending/recent have natural bounds).
+    total_pages = 1
+    if tab == "all":
+        page_size = 100
+        total = query.count()
+        total_pages = max(1, (total + page_size - 1) // page_size)
+        page = min(page, total_pages)
+        query = query.offset((page - 1) * page_size).limit(page_size)
+
     cves = query.all()
 
     # Count linked news articles per CVE
@@ -229,7 +239,7 @@ def dashboard(
     fmt = date_fmt if date_fmt in ("us", "eu") else "us"
     return templates.TemplateResponse(
         "dashboard.html",
-        {"request": request, "cves": cves, "active_tab": tab, "news_counts": news_counts, "risk_scores": risk_scores, "risk_weights": RISK_WEIGHTS, "date_fmt": fmt, "q": q},
+        {"request": request, "cves": cves, "active_tab": tab, "news_counts": news_counts, "risk_scores": risk_scores, "risk_weights": RISK_WEIGHTS, "date_fmt": fmt, "q": q, "page": page, "total_pages": total_pages},
     )
 
 

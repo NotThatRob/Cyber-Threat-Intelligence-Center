@@ -97,3 +97,8 @@ tbody tr:hover { background: #0f0d18; }
 .detail-section h3 { font-size: 0.78rem; color: #6b6480; text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600; margin: 0 0 0.6rem 0; }
 .detail-factors { margin: 0; padding-left: 1.25rem; font-size: 0.85rem; line-height: 1.8; color: #b8b2c8; }
 .detail-factors li::marker { color: #4a4360; }
+.cvss-vector { font-family: 'JetBrains Mono', monospace; font-size: 0.78rem; color: #9a94aa; }
+
+/* ── Pagination ─────────────────────────────────── */
+.pagination { display: flex; align-items: center; gap: 1rem; justify-content: center; padding: 1rem 0; font-size: 0.82rem; }
+.page-info { color: #6b6480; }

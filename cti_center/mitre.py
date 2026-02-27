@@ -19,8 +19,8 @@ MITRE_CVE_API = "https://cveawg.mitre.org/api/cve"
 USER_AGENT = "CTI-Center/0.1 (vulnerability-aggregator)"
 
 
-def _extract_cvss(metrics: list) -> tuple[float, str]:
-    """Extract CVSS score from CNA metrics array (CVE 5.x format)."""
+def _extract_cvss(metrics: list) -> tuple[float, str, str]:
+    """Extract CVSS score, severity, and vector from CNA metrics array (CVE 5.x format)."""
     for metric in metrics:
         for key in ("cvssV3_1", "cvssV3_0", "cvssV31", "cvssV30", "cvssV4_0", "cvssV40"):
             cvss_data = metric.get(key)
@@ -28,10 +28,11 @@ def _extract_cvss(metrics: list) -> tuple[float, str]:
                 score = float(cvss_data.get("baseScore", 0))
                 if score > 0:
                     severity = cvss_data.get("baseSeverity", "")
+                    vector = cvss_data.get("vectorString", "")
                     if not severity:
                         severity = _parse_severity(score)
-                    return score, severity.upper()
-    return 0.0, "NONE"
+                    return score, severity.upper(), vector
+    return 0.0, "NONE", ""
 
 
 def _extract_description(descriptions: list) -> str:
@@ -93,7 +94,7 @@ def fetch_cve_record(cve_id: str) -> dict | None:
         return None
 
     metrics = cna.get("metrics", [])
-    cvss_score, severity = _extract_cvss(metrics)
+    cvss_score, severity, cvss_vector = _extract_cvss(metrics)
 
     descriptions = cna.get("descriptions", [])
     description = _extract_description(descriptions)
@@ -104,6 +105,7 @@ def fetch_cve_record(cve_id: str) -> dict | None:
     return {
         "cvss_score": cvss_score,
         "severity": severity,
+        "cvss_vector": cvss_vector,
         "description": description,
         "affected_product": affected_product,
     }
@@ -134,6 +136,8 @@ def enrich_cves(db: Session, limit: int = 50) -> tuple[int, int]:
         if record["cvss_score"] > 0:
             cve.cvss_score = record["cvss_score"]
             cve.severity = record["severity"]
+            if record["cvss_vector"] and not cve.cvss_vector:
+                cve.cvss_vector = record["cvss_vector"]
 
         if record["description"] and cve.description in (
             "No description available.",

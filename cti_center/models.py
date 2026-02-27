@@ -14,6 +14,7 @@ class CVE(Base):
     cve_id: Mapped[str] = mapped_column(String(20), unique=True, index=True)
     description: Mapped[str] = mapped_column(Text)
     cvss_score: Mapped[float] = mapped_column(Float)
+    cvss_vector: Mapped[Optional[str]] = mapped_column(String(200), nullable=True, default=None)
     severity: Mapped[str] = mapped_column(String(10))
     affected_product: Mapped[str] = mapped_column(String(200))
     date_published: Mapped[date] = mapped_column(Date)
