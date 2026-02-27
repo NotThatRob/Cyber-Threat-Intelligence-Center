@@ -6,6 +6,12 @@
     <a href="/?tab=recent" class="tab {% if active_tab == 'recent' %}active{% endif %}">Recent</a>
     <a href="/?tab=all" class="tab {% if active_tab == 'all' %}active{% endif %}">All</a>
 </nav>
+<form class="search-form" method="get" action="/">
+    <input type="hidden" name="tab" value="{{ active_tab }}">
+    <input class="search-input" type="text" name="q" value="{{ q }}" placeholder="Search CVEs, products, keywords...">
+    <button class="search-btn" type="submit">Search</button>
+    {% if q %}<a href="/?tab={{ active_tab }}" class="search-clear">Clear</a>{% endif %}
+</form>
 {% set ns = namespace(critical=0, high=0, exploited=0, in_news=0) %}
 {% for cve in cves %}
     {% if cve.severity == 'CRITICAL' %}{% set ns.critical = ns.critical + 1 %}{% endif %}
@@ -37,7 +43,7 @@
         {% set rs = risk_scores[cve.cve_id] %}
         <tr class="severity-{{ cve.severity | lower }}">
             <td class="col-id">
-                <a href="{{ cve.source_url }}" target="_blank" rel="noopener">{{ cve.cve_id }}</a>
+                <a href="/cve/{{ cve.cve_id }}">{{ cve.cve_id }}</a>
                 {% if cve.kev_date_added %}
                 <span class="badge-kev" title="CISA KEV — Due: {{ cve.kev_due_date | format_date(date_fmt) }}{% if cve.kev_ransomware == 'Known' %} | Ransomware: Known{% endif %}">KEV</span>
                 {% endif %}

@@ -16,7 +16,7 @@ from cti_center.database import Base, SessionLocal, apply_migrations, engine, ge
 from cti_center.logging_config import setup_logging
 from cti_center.models import CVE, CVENewsLink, NewsArticle
 from cti_center.scheduler import start_scheduler, stop_scheduler
-from cti_center.scoring import RISK_WEIGHTS, score_cves
+from cti_center.scoring import RISK_WEIGHTS, compute_risk_score, score_cves
 from cti_center.seed import seed
 
 setup_logging()
@@ -123,18 +123,21 @@ def toggle_date_format(request: Request, date_fmt: str | None = Cookie(None)):
 def dashboard(
     request: Request,
     tab: str = Query("trending"),
+    q: str = Query(""),
     db: Session = Depends(get_db),
     date_fmt: str | None = Cookie(None),
 ):
     if tab not in ("trending", "recent", "all"):
         tab = "trending"
 
+    q = q.strip()
+
     today = date.today()
 
     if tab == "trending":
         kev_cutoff = today - timedelta(days=30)
         recent_cutoff = today - timedelta(days=7)
-        cves = (
+        query = (
             db.query(CVE)
             .filter(
                 or_(
@@ -151,18 +154,28 @@ def dashboard(
                 CVE.cvss_score.desc(),
             )
             .limit(50)
-            .all()
         )
     elif tab == "recent":
         recent_cutoff = today - timedelta(days=7)
-        cves = (
+        query = (
             db.query(CVE)
             .filter(CVE.date_published >= recent_cutoff)
             .order_by(CVE.date_published.desc())
-            .all()
         )
     else:  # all
-        cves = db.query(CVE).order_by(CVE.date_published.desc()).all()
+        query = db.query(CVE).order_by(CVE.date_published.desc())
+
+    if q:
+        pattern = f"%{q}%"
+        query = query.filter(
+            or_(
+                CVE.cve_id.ilike(pattern),
+                CVE.affected_product.ilike(pattern),
+                CVE.description.ilike(pattern),
+            )
+        )
+
+    cves = query.all()
 
     # Count linked news articles per CVE
     cve_ids = [c.cve_id for c in cves]
@@ -184,7 +197,45 @@ def dashboard(
     fmt = date_fmt if date_fmt in ("us", "eu") else "us"
     return templates.TemplateResponse(
         "dashboard.html",
-        {"request": request, "cves": cves, "active_tab": tab, "news_counts": news_counts, "risk_scores": risk_scores, "risk_weights": RISK_WEIGHTS, "date_fmt": fmt},
+        {"request": request, "cves": cves, "active_tab": tab, "news_counts": news_counts, "risk_scores": risk_scores, "risk_weights": RISK_WEIGHTS, "date_fmt": fmt, "q": q},
+    )
+
+
+@app.get("/cve/{cve_id}", response_class=HTMLResponse)
+def cve_detail(
+    request: Request,
+    cve_id: str,
+    db: Session = Depends(get_db),
+    date_fmt: str | None = Cookie(None),
+):
+    cve = db.query(CVE).filter(CVE.cve_id == cve_id).first()
+    if not cve:
+        return HTMLResponse(status_code=404, content="CVE not found")
+
+    articles = (
+        db.query(NewsArticle)
+        .join(CVENewsLink, CVENewsLink.article_id == NewsArticle.id)
+        .filter(CVENewsLink.cve_id == cve_id)
+        .order_by(NewsArticle.published_date.desc())
+        .all()
+    )
+
+    risk_score = compute_risk_score(cve, news_count=len(articles))
+
+    # Preserve the page the user came from (tab, search query, etc.)
+    referer = request.headers.get("referer", "")
+    from urllib.parse import urlparse
+    parsed = urlparse(referer)
+    base = urlparse(str(request.base_url))
+    if parsed.netloc and parsed.netloc == base.netloc and parsed.path in ("/", "/news"):
+        back_url = referer
+    else:
+        back_url = "/"
+
+    fmt = date_fmt if date_fmt in ("us", "eu") else "us"
+    return templates.TemplateResponse(
+        "cve_detail.html",
+        {"request": request, "cve": cve, "risk_score": risk_score, "articles": articles, "risk_weights": RISK_WEIGHTS, "date_fmt": fmt, "back_url": back_url},
     )
 
 

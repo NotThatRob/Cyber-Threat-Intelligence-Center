@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}{{ cve.cve_id }} - Cyber Threat Intelligence Center{% endblock %}
+{% block content %}
+<a href="{{ back_url }}" class="back-link">&larr; Back</a>
+<div class="detail-header">
+    <h2>{{ cve.cve_id }}</h2>
+    {% set rs = risk_score %}
+    {% set w = risk_weights %}
+    <span class="risk-score risk-score-{{ rs.label }}" title="Risk Score Breakdown&#10;&#10;CVSS Base:        {{ rs.cvss_component | round(1) }} / {{ w.cvss | int }}&#10;Exploit Maturity:  {{ rs.exploit_component | round(1) }} / {{ w.exploit | int }}&#10;News Velocity:     {{ rs.news_component | round(1) }} / {{ w.news | int }}&#10;Recency:           {{ rs.recency_component | round(1) }} / {{ w.recency | int }}&#10;KEV Urgency:       {{ rs.urgency_component | round(1) }} / {{ w.urgency | int }}">{{ rs.score }}</span>
+</div>
+<p class="detail-description">{{ cve.description }}</p>
+<div class="detail-meta">
+    <div><span class="meta-label">Severity</span> <span class="severity-{{ cve.severity | lower }}-text">{{ cve.severity }} ({{ cve.cvss_score }})</span></div>
+    <div><span class="meta-label">Published</span> {{ cve.date_published | format_date(date_fmt) }}</div>
+    <div><span class="meta-label">Product</span> {{ cve.affected_product }}</div>
+    <div><span class="meta-label">Source</span> <a href="{{ cve.source_url }}" target="_blank" rel="noopener">View on NVD &rarr;</a></div>
+</div>
+{% if cve.kev_date_added %}
+<div class="detail-kev">
+    <strong>Actively Exploited (CISA KEV)</strong>
+    {% if cve.kev_required_action %}<p>{{ cve.kev_required_action }}</p>{% endif %}
+    <div class="detail-meta">
+        <div><span class="meta-label">Added</span> {{ cve.kev_date_added | format_date(date_fmt) }}</div>
+        <div><span class="meta-label">Due Date</span> {{ cve.kev_due_date | format_date(date_fmt) }}</div>
+        {% if cve.kev_ransomware == 'Known' %}<div><span class="meta-label">Ransomware</span> Known</div>{% endif %}
+    </div>
+</div>
+{% endif %}
+{% if rs.factors %}
+<div class="detail-section">
+    <h3>Risk Factors</h3>
+    <ul class="detail-factors">
+        {% for factor in rs.factors %}
+        <li>{{ factor }}</li>
+        {% endfor %}
+    </ul>
+</div>
+{% endif %}
+{% if articles %}
+<div class="detail-section">
+    <h3>News Coverage</h3>
+    <table>
+        <thead>
+            <tr><th>Title</th><th>Source</th><th>Published</th></tr>
+        </thead>
+        <tbody>
+            {% for article in articles %}
+            <tr>
+                <td><a href="{{ article.url }}" target="_blank" rel="noopener">{{ article.title }}</a></td>
+                <td>{{ article.source_name }}</td>
+                <td class="col-nowrap">{{ article.published_date | format_date(date_fmt) }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+{% endblock %}
