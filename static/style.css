@@ -58,13 +58,31 @@ tbody tr:hover { background: #0f0d18; }
 .col-id { white-space: nowrap; }
 .col-id a { font-family: 'JetBrains Mono', monospace; font-weight: 500; font-size: 0.8rem; }
 
-/* ── Summary Bar ─────────────────────────────────── */
-.summary-bar { font-size: 0.78rem; color: #7a7290; margin: 0 0 0.75rem 0; letter-spacing: 0.01em; }
-.summary-sep { margin: 0 0.5rem; color: #2d2640; }
-.summary-critical { color: #ff4d6a; font-weight: 600; }
-.summary-high { color: #f0883e; font-weight: 600; }
-.summary-exploited { color: #dc2646; font-weight: 600; }
-.summary-news { color: #8b5cf6; font-weight: 600; }
+/* ── Filter Bar ──────────────────────────────────── */
+.filter-bar { display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; margin: 0 0 0.75rem 0; }
+.filter-pill { display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.25rem 0.65rem; font-size: 0.7rem; font-weight: 600; font-family: 'JetBrains Mono', monospace; letter-spacing: 0.02em; border: 1px solid; border-radius: 99px; cursor: pointer; transition: background 0.15s, color 0.15s, border-color 0.15s; text-decoration: none; }
+.filter-pill:hover { text-decoration: none; }
+.filter-pill-critical { color: #ff4d6a; border-color: #ff4d6a; }
+.filter-pill-critical:hover { background: rgba(255, 77, 106, 0.1); }
+.filter-pill-critical.active { background: #ff4d6a; color: #fff; }
+.filter-pill-high { color: #f0883e; border-color: #f0883e; }
+.filter-pill-high:hover { background: rgba(240, 136, 62, 0.1); }
+.filter-pill-high.active { background: #f0883e; color: #fff; }
+.filter-pill-medium { color: #d4a843; border-color: #d4a843; }
+.filter-pill-medium:hover { background: rgba(212, 168, 67, 0.1); }
+.filter-pill-medium.active { background: #d4a843; color: #0a0a12; }
+.filter-pill-low { color: #50c878; border-color: #50c878; }
+.filter-pill-low:hover { background: rgba(80, 200, 120, 0.1); }
+.filter-pill-low.active { background: #50c878; color: #0a0a12; }
+.filter-pill-kev { color: #dc2646; border-color: #dc2646; }
+.filter-pill-kev:hover { background: rgba(220, 38, 70, 0.1); }
+.filter-pill-kev.active { background: #dc2646; color: #fff; }
+.filter-pill-news { color: #8b5cf6; border-color: #8b5cf6; }
+.filter-pill-news:hover { background: rgba(139, 92, 246, 0.1); }
+.filter-pill-news.active { background: #8b5cf6; color: #fff; }
+.filter-sep { width: 1px; height: 1.2rem; background: #2d2640; margin: 0 0.25rem; }
+.filter-clear { color: #7a7290; font-size: 0.72rem; margin-left: 0.25rem; transition: color 0.15s; }
+.filter-clear:hover { color: #e0dce8; text-decoration: none; }
 
 /* ── Search ──────────────────────────────────────── */
 .search-form { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem; }
@@ -102,3 +120,9 @@ tbody tr:hover { background: #0f0d18; }
 /* ── Pagination ─────────────────────────────────── */
 .pagination { display: flex; align-items: center; gap: 1rem; justify-content: center; padding: 1rem 0; font-size: 0.82rem; }
 .page-info { color: #6b6480; }
+
+/* ── Sort Indicators ────────────────────────────── */
+.sort-link { color: #6b6480; text-decoration: none; text-transform: uppercase; font-size: 0.7rem; font-weight: 600; letter-spacing: 0.05em; transition: color 0.15s; }
+.sort-link:hover { color: #e0dce8; text-decoration: none; }
+.sort-link.active { color: #c084fc; }
+.sort-arrow { color: #c084fc; font-size: 0.6rem; margin-left: 0.15rem; }

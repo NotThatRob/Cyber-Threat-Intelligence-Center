@@ -168,6 +168,11 @@ def dashboard(
     tab: str = Query("trending"),
     q: str = Query("", max_length=200),
     page: int = Query(1, ge=1),
+    severity: str = Query("", max_length=50),
+    kev: int = Query(0, ge=0, le=1),
+    news: int = Query(0, ge=0, le=1),
+    sort: str = Query("", max_length=20),
+    dir: str = Query("", max_length=4),
     db: Session = Depends(get_db),
     date_fmt: str | None = Cookie(None),
 ):
@@ -176,7 +181,19 @@ def dashboard(
 
     q = q.strip()
 
+    # Validate filter/sort params
+    valid_severities = {"CRITICAL", "HIGH", "MEDIUM", "LOW"}
+    active_severities = [s for s in severity.upper().split(",") if s in valid_severities] if severity else []
+    kev = 1 if kev == 1 else 0
+    news = 1 if news == 1 else 0
+    valid_sorts = {"risk", "severity", "published"}
+    if sort not in valid_sorts:
+        sort = ""
+    if dir not in ("asc", "desc"):
+        dir = ""
+
     today = date.today()
+    has_custom_sort = sort and dir and sort != "risk"
 
     if tab == "trending":
         kev_cutoff = today - timedelta(days=30)
@@ -192,22 +209,23 @@ def dashboard(
                     ),
                 )
             )
-            .order_by(
+        )
+        if not has_custom_sort:
+            query = query.order_by(
                 case((CVE.kev_date_added.isnot(None), 0), else_=1),
                 CVE.kev_date_added.desc().nullslast(),
                 CVE.cvss_score.desc(),
             )
-            .limit(50)
-        )
+        query = query.limit(50)
     elif tab == "recent":
         recent_cutoff = today - timedelta(days=7)
-        query = (
-            db.query(CVE)
-            .filter(CVE.date_published >= recent_cutoff)
-            .order_by(CVE.date_published.desc())
-        )
+        query = db.query(CVE).filter(CVE.date_published >= recent_cutoff)
+        if not has_custom_sort:
+            query = query.order_by(CVE.date_published.desc())
     else:  # all
-        query = db.query(CVE).order_by(CVE.date_published.desc())
+        query = db.query(CVE)
+        if not has_custom_sort:
+            query = query.order_by(CVE.date_published.desc())
 
     if q:
         q_escaped = q.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
@@ -219,6 +237,20 @@ def dashboard(
                 CVE.description.ilike(pattern, escape="\\"),
             )
         )
+
+    # Apply filters
+    if active_severities:
+        query = query.filter(CVE.severity.in_(active_severities))
+    if kev:
+        query = query.filter(CVE.kev_date_added.isnot(None))
+    if news:
+        news_subq = db.query(CVENewsLink.cve_id).distinct().subquery()
+        query = query.filter(CVE.cve_id.in_(db.query(news_subq.c.cve_id)))
+
+    # Apply SQL-level sort for severity/published
+    if has_custom_sort:
+        col = CVE.cvss_score if sort == "severity" else CVE.date_published
+        query = query.order_by(col.asc() if dir == "asc" else col.desc())
 
     # Paginate the "all" tab (trending/recent have natural bounds).
     total_pages = 1
@@ -245,13 +277,24 @@ def dashboard(
 
     risk_scores = score_cves(cves, news_counts)
 
-    if tab == "trending":
+    # Python-side sort for risk score
+    if sort == "risk" and dir:
+        cves = sorted(cves, key=lambda c: risk_scores[c.cve_id].score, reverse=(dir == "desc"))
+    elif tab == "trending" and not sort:
         cves = sorted(cves, key=lambda c: risk_scores[c.cve_id].score, reverse=True)
 
     fmt = date_fmt if date_fmt in ("us", "eu") else "us"
     return templates.TemplateResponse(
         "dashboard.html",
-        {"request": request, "cves": cves, "active_tab": tab, "news_counts": news_counts, "risk_scores": risk_scores, "risk_weights": RISK_WEIGHTS, "date_fmt": fmt, "q": q, "page": page, "total_pages": total_pages},
+        {
+            "request": request, "cves": cves, "active_tab": tab,
+            "news_counts": news_counts, "risk_scores": risk_scores,
+            "risk_weights": RISK_WEIGHTS, "date_fmt": fmt, "q": q,
+            "page": page, "total_pages": total_pages,
+            "active_severities": active_severities,
+            "filter_kev": kev, "filter_news": news,
+            "sort_col": sort, "sort_dir": dir,
+        },
     )
 
 
