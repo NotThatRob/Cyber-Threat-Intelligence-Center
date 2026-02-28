@@ -30,7 +30,8 @@ _CVE_PATTERN = re.compile(
     re.IGNORECASE,
 )
 
-_CURRENT_YEAR = datetime.now(timezone.utc).year
+def _current_year() -> int:
+    return datetime.now(timezone.utc).year
 
 # Minimum seconds between full-page fetches (ethical scraping).
 PAGE_FETCH_DELAY = 2.0
@@ -109,7 +110,7 @@ def _normalize_cve_id(raw: str) -> str | None:
         year = int(parts[1])
     except ValueError:
         return None
-    if year < 1999 or year > _CURRENT_YEAR:
+    if year < 1999 or year > _current_year():
         return None
     return normalized
 

@@ -66,9 +66,9 @@
 </table>
 {% if total_pages > 1 %}
 <nav class="pagination">
-    {% if page > 1 %}<a href="/?tab={{ active_tab }}&page={{ page - 1 }}{% if q %}&q={{ q }}{% endif %}">&larr; Prev</a>{% endif %}
+    {% if page > 1 %}<a href="/?tab={{ active_tab }}&page={{ page - 1 }}{% if q %}&q={{ q | urlencode }}{% endif %}">&larr; Prev</a>{% endif %}
     <span class="page-info">Page {{ page }} of {{ total_pages }}</span>
-    {% if page < total_pages %}<a href="/?tab={{ active_tab }}&page={{ page + 1 }}{% if q %}&q={{ q }}{% endif %}">Next &rarr;</a>{% endif %}
+    {% if page < total_pages %}<a href="/?tab={{ active_tab }}&page={{ page + 1 }}{% if q %}&q={{ q | urlencode }}{% endif %}">Next &rarr;</a>{% endif %}
 </nav>
 {% endif %}
 {% endblock %}

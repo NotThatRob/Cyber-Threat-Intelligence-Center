@@ -101,12 +101,14 @@ def fetch_ghsa(days_back: int = 7) -> list[CVE]:
 
                 source_url = advisory.get("html_url", f"https://nvd.nist.gov/vuln/detail/{cve_id}")
 
+                cvss_vector = str(cvss_data.get("vector_string", "") or "")
+
                 cves.append(
                     CVE(
                         cve_id=cve_id,
                         description=summary[:2000],
                         cvss_score=cvss_score,
-                        cvss_vector="",
+                        cvss_vector=cvss_vector,
                         severity=severity,
                         affected_product=affected_product[:200],
                         date_published=date_published,

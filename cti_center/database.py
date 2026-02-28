@@ -1,4 +1,5 @@
 import logging
+from pathlib import Path
 
 from sqlalchemy import create_engine, text
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
@@ -6,7 +7,8 @@ from sqlalchemy.orm import DeclarativeBase, sessionmaker
 
 logger = logging.getLogger(__name__)
 
-DATABASE_URL = "sqlite:///cti_center.db"
+_PROJECT_ROOT = Path(__file__).resolve().parent.parent
+DATABASE_URL = f"sqlite:///{_PROJECT_ROOT / 'cti_center.db'}"
 
 engine = create_engine(
     DATABASE_URL,

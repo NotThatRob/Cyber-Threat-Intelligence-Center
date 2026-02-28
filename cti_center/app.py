@@ -1,5 +1,7 @@
 import logging
 import os
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
@@ -40,7 +42,15 @@ try:
 finally:
     _mig_db.close()
 
-app = FastAPI(title="CTI-Center")
+@asynccontextmanager
+async def lifespan(application: FastAPI) -> AsyncIterator[None]:
+    seed()
+    start_scheduler()
+    yield
+    stop_scheduler()
+
+
+app = FastAPI(title="CTI-Center", lifespan=lifespan)
 
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
@@ -118,15 +128,14 @@ templates.env.filters["time_ago"] = _time_ago
 templates.env.globals["get_last_updated"] = get_last_updated
 
 
-@app.on_event("startup")
-def on_startup():
-    seed()
-    start_scheduler()
+def _safe_url(url: str) -> str:
+    """Jinja2 filter: only allow http/https URLs, block javascript: and data: protocols."""
+    if url and url.strip().lower().startswith(("http://", "https://")):
+        return url
+    return "#"
 
 
-@app.on_event("shutdown")
-def on_shutdown():
-    stop_scheduler()
+templates.env.filters["safe_url"] = _safe_url
 
 
 @app.get("/settings/date-format", response_class=HTMLResponse)
@@ -146,7 +155,10 @@ def toggle_date_format(request: Request, date_fmt: str | None = Cookie(None)):
         else:
             redirect_url = "/"
     response = RedirectResponse(url=redirect_url, status_code=303)
-    response.set_cookie("date_fmt", new_fmt, max_age=365 * 24 * 3600)
+    response.set_cookie(
+        "date_fmt", new_fmt, max_age=365 * 24 * 3600,
+        httponly=True, samesite="lax",
+    )
     return response
 
 

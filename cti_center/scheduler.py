@@ -96,7 +96,14 @@ def _job_nvd() -> None:
 
 
 def _job_kev() -> None:
-    """Fetch the CISA KEV catalog with conditional request support."""
+    """Fetch the CISA KEV catalog with conditional request support.
+
+    Note on the lock pattern: the state lock is intentionally released between
+    reading cached headers and writing updated ones.  Holding the lock during
+    the network fetch would block other jobs from accessing their own state.
+    Safety is preserved because the write side reloads state before merging,
+    and each job writes to its own distinct key (``kev``, ``news_feeds``, etc.).
+    """
     try:
         from cti_center.kev import fetch_kev
 
