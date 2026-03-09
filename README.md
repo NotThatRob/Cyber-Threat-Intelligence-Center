@@ -7,7 +7,8 @@ Most CVE tools tell you what exists. CTI-Center tells you what matters, and why,
 ## Features
 
 - **Custom Risk Scoring** — A 0-100 risk score that blends CVSS base score (35%), exploit maturity via CISA KEV (30%), news velocity (15%), recency (10%), and federal remediation urgency (10%). Each score includes human-readable explanations of why it differs from raw CVSS. Rejected CVEs are automatically scored at 0.
-- **Dashboard Filtering & Sorting** — Clickable severity pills (Critical, High, Medium, Low), KEV toggle, and In News toggle for multi-select filtering. Risk, Severity, and Published columns are sortable (desc/asc/default). All filters combine with text search and are preserved across tab switches and pagination.
+- **CVE Highlighting** — CVEs meeting key analyst-relevant conditions are visually flagged with an amber indicator and a "why it matters" one-liner. A CVE is highlighted when it has high CVSS plus a network attack vector (AV:N), is listed in CISA KEV, or is covered by 2+ news sources. One-liners synthesize severity, signals, and a recommended action (e.g., *"Critical vuln remotely exploitable, actively exploited in ransomware campaigns — patch immediately"*).
+- **Dashboard Filtering & Sorting** — Clickable severity pills (Critical, High, Medium, Low), KEV toggle, In News toggle, and Highlighted toggle for multi-select filtering. Risk, Severity, and Published columns are sortable (desc/asc/default). All filters combine with text search and are preserved across tab switches and pagination.
 - **Multi-Source Ingestion** — Pulls from the NVD API, CISA Known Exploited Vulnerabilities catalog, GitHub Advisory Database, MITRE CVE Services, and RSS feeds from major security outlets.
 - **News-Aware Analysis** — Links CVEs to security news articles and surfaces coverage volume as a risk signal. CVEs discussed across multiple sources are ranked higher. The news page supports filtering by articles with or without linked CVEs.
 - **Exploit-First Prioritization** — CVEs actively exploited in the wild, used in ransomware campaigns, or nearing federal remediation deadlines are surfaced above high-CVSS theoretical risks.
@@ -70,7 +71,7 @@ The main view with three tabs:
 - **Recent** — All CVEs published in the last 7 days, sorted by publication date.
 - **All** — The full CVE database, paginated at 100 per page.
 
-**Filtering:** Clickable severity pills (Critical, High, Medium, Low) support multi-select. KEV and In News pills toggle on/off. Each pill shows a live count of matching CVEs in the current view. A "Clear filters" link appears when any filter is active. All filters combine with text search using AND logic.
+**Filtering:** Clickable severity pills (Critical, High, Medium, Low) support multi-select. KEV, In News, and Highlighted pills toggle on/off. Each pill shows a live count of matching CVEs in the current view. A "Clear filters" link appears when any filter is active. All filters combine with text search using AND logic.
 
 **Sorting:** Click the Risk, Severity, or Published column headers to cycle through descending, ascending, and default sort order. The active sort column is highlighted with an arrow indicator.
 
@@ -78,7 +79,7 @@ The main view with three tabs:
 
 ### CVE Detail (`/cve/{id}`)
 
-Shows the full record for a single CVE: description, severity with CVSS score, CVSS vector string, CWE weakness IDs, affected product, and publication date. The risk score breakdown shows points earned per component (CVSS Base, Exploit Maturity, News Velocity, Recency, KEV Urgency) with human-readable factor explanations.
+Shows the full record for a single CVE: description, severity with CVSS score, CVSS vector string, CWE weakness IDs, affected product, and publication date. Highlighted CVEs display a "Why this matters" banner with an action-oriented summary. The risk score breakdown shows points earned per component (CVSS Base, Exploit Maturity, News Velocity, Recency, KEV Urgency) with human-readable factor explanations.
 
 For KEV-listed CVEs, a highlighted section shows the CISA-mandated remediation action, date added, federal due date, and ransomware campaign status. Linked news articles are listed with source and publication date.
 
@@ -164,6 +165,7 @@ CTI-Center computes a custom 0-100 risk score for every CVE, designed to surface
 Scores are categorized into risk labels: Critical (75-100), High (50-74), Medium (25-49), and Low (0-24). Rejected CVEs automatically receive a score of 0. Each score includes factor strings explaining the rating, visible via tooltip on the dashboard. Examples:
 
 - *"Actively exploited in the wild (CISA KEV)"*
+- *"Remotely exploitable over the network (AV:N)"*
 - *"High CVSS but no real-world exploitation observed"*
 - *"Low CVSS but actively exploited — real-world risk exceeds base score"*
 - *"Federal remediation deadline overdue"*
