@@ -80,6 +80,9 @@ tbody tr:hover { background: #0f0d18; }
 .filter-pill-news { color: #8b5cf6; border-color: #8b5cf6; }
 .filter-pill-news:hover { background: rgba(139, 92, 246, 0.1); }
 .filter-pill-news.active { background: #8b5cf6; color: #fff; }
+.filter-pill-highlighted { color: #f59e0b; border-color: #f59e0b; }
+.filter-pill-highlighted:hover { background: rgba(245, 158, 11, 0.1); }
+.filter-pill-highlighted.active { background: #f59e0b; color: #0a0a12; }
 .filter-sep { width: 1px; height: 1.2rem; background: #2d2640; margin: 0 0.25rem; }
 .filter-clear { color: #7a7290; font-size: 0.72rem; margin-left: 0.25rem; transition: color 0.15s; }
 .filter-clear:hover { color: #e0dce8; text-decoration: none; }
@@ -94,6 +97,12 @@ tbody tr:hover { background: #0f0d18; }
 .search-clear { color: #7a7290; font-size: 0.78rem; transition: color 0.15s; }
 .search-clear:hover { color: #e0dce8; text-decoration: none; }
 
+/* ── Highlighted CVEs ────────────────────────────── */
+tr.highlighted td:first-child { border-left: 3px solid #f59e0b; }
+tr.highlighted { background: rgba(245, 158, 11, 0.04); }
+tr.highlighted:hover { background: rgba(245, 158, 11, 0.08); }
+.why-it-matters { font-size: 0.7rem; color: #d4a843; margin-top: 0.2rem; font-style: italic; line-height: 1.4; }
+
 /* ── Empty State ─────────────────────────────────── */
 .empty-state { text-align: center; color: #6b6480; padding: 2.5rem 1rem; font-style: italic; }
 .text-muted { color: #4a4360; font-style: italic; }
@@ -107,6 +116,8 @@ tbody tr:hover { background: #0f0d18; }
 .detail-description { line-height: 1.7; margin: 0 0 1.25rem 0; color: #b8b2c8; max-width: 56rem; }
 .detail-meta { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem 2rem; font-size: 0.85rem; margin-bottom: 1.25rem; }
 .meta-label { color: #6b6480; margin-right: 0.5rem; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.04em; }
+.why-it-matters-banner { border-left: 3px solid #f59e0b; background: rgba(245, 158, 11, 0.06); border-radius: 0 4px 4px 0; padding: 0.6rem 1rem; margin-bottom: 1.25rem; font-size: 0.88rem; color: #e0dce8; }
+.why-it-matters-banner strong { color: #f59e0b; font-size: 0.82rem; margin-right: 0.35rem; }
 .detail-kev { border-left: 3px solid #dc2646; background: rgba(220, 38, 70, 0.05); border-radius: 0 4px 4px 0; padding: 0.75rem 1rem; margin-bottom: 1.25rem; }
 .detail-kev strong { color: #ff4d6a; font-size: 0.88rem; }
 .detail-kev p { margin: 0.4rem 0 0.5rem 0; color: #b8b2c8; }

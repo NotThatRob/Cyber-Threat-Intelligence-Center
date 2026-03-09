@@ -9,6 +9,11 @@
     <span class="risk-score risk-score-{{ rs.label }}" title="Risk Score Breakdown&#10;&#10;CVSS Base:        {{ rs.cvss_component | round(1) }} / {{ w.cvss | int }}&#10;Exploit Maturity:  {{ rs.exploit_component | round(1) }} / {{ w.exploit | int }}&#10;News Velocity:     {{ rs.news_component | round(1) }} / {{ w.news | int }}&#10;Recency:           {{ rs.recency_component | round(1) }} / {{ w.recency | int }}&#10;KEV Urgency:       {{ rs.urgency_component | round(1) }} / {{ w.urgency | int }}">{{ rs.score }}</span>
 </div>
 <p class="detail-description">{{ cve.description }}</p>
+{% if rs.why_it_matters %}
+<div class="why-it-matters-banner">
+    <strong>Why this matters:</strong> {{ rs.why_it_matters }}
+</div>
+{% endif %}
 <div class="detail-meta">
     <div><span class="meta-label">Severity</span> <span class="severity-{{ cve.severity | lower }}-text">{{ cve.severity }} ({{ cve.cvss_score }})</span></div>
     {% if cve.cvss_vector %}<div><span class="meta-label">Vector</span> <span class="cvss-vector">{{ cve.cvss_vector }}</span></div>{% endif %}

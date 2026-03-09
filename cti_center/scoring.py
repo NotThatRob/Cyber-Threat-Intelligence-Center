@@ -15,6 +15,21 @@ from datetime import date
 
 from cti_center.models import CVE
 
+
+def parse_attack_vector(cvss_vector: str | None) -> str | None:
+    """Extract the Attack Vector metric from a CVSS v3.x vector string.
+
+    Returns one of 'N' (Network), 'A' (Adjacent), 'L' (Local), 'P' (Physical),
+    or None if the vector is missing or unparseable.
+    """
+    if not cvss_vector:
+        return None
+    for part in cvss_vector.split("/"):
+        if part.startswith("AV:"):
+            return part[3:]
+    return None
+
+
 # ---------------------------------------------------------------------------
 # Configurable weights — edit these to shift scoring priorities.
 # Each value is the max points that component can contribute (must sum to 100).
@@ -37,6 +52,8 @@ class RiskScore:
     news_component: float = 0.0
     recency_component: float = 0.0
     urgency_component: float = 0.0
+    highlighted: bool = False
+    why_it_matters: str = ""
 
     @property
     def label(self) -> str:
@@ -119,6 +136,50 @@ def compute_risk_score(
     raw = cvss_component + exploit_component + news_component + recency_component + urgency_component
     score = min(int(round(raw)), 100)
 
+    # --- Highlighting logic ---
+    attack_vector = parse_attack_vector(cve.cvss_vector)
+    is_network = attack_vector == "N"
+    is_high_cvss_network = cvss >= 7.0 and is_network
+    is_exploited = cve.kev_date_added is not None
+    is_multi_news = news_count >= 2
+
+    if is_high_cvss_network:
+        factors.append("Remotely exploitable over the network (AV:N)")
+
+    highlighted = is_high_cvss_network or is_exploited or is_multi_news
+
+    why_it_matters = ""
+    if highlighted:
+        if cvss >= 9.0:
+            sev = "Critical"
+        elif cvss >= 7.0:
+            sev = "High-severity"
+        else:
+            sev = "Notable"
+
+        parts: list[str] = []
+        if is_network:
+            parts.append("remotely exploitable")
+        if is_exploited and cve.kev_ransomware == "Known":
+            parts.append("actively exploited in ransomware campaigns")
+        elif is_exploited:
+            parts.append("actively exploited in the wild")
+        if is_multi_news:
+            parts.append(f"covered by {news_count} news sources")
+
+        if is_exploited:
+            if cve.kev_due_date and (cve.kev_due_date - today).days <= 7:
+                action = "remediate before federal deadline"
+            else:
+                action = "patch immediately"
+        elif is_high_cvss_network:
+            action = "assess exposure urgently"
+        else:
+            action = "monitor and assess"
+
+        description = ", ".join(parts)
+        why_it_matters = f"{sev} vuln {description} \u2014 {action}"
+
     # Discrepancy callouts
     if cvss >= 7.0 and cve.kev_date_added is None and news_count == 0:
         factors.append("High CVSS but no real-world exploitation observed")
@@ -133,6 +194,8 @@ def compute_risk_score(
         news_component=news_component,
         recency_component=recency_component,
         urgency_component=urgency_component,
+        highlighted=highlighted,
+        why_it_matters=why_it_matters,
     )
 
 

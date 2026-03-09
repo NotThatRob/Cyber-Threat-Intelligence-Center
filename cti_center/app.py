@@ -171,6 +171,7 @@ def dashboard(
     severity: str = Query("", max_length=50),
     kev: int = Query(0, ge=0, le=1),
     news: int = Query(0, ge=0, le=1),
+    highlighted: int = Query(0, ge=0, le=1),
     sort: str = Query("", max_length=20),
     dir: str = Query("", max_length=4),
     db: Session = Depends(get_db),
@@ -186,6 +187,7 @@ def dashboard(
     active_severities = [s for s in severity.upper().split(",") if s in valid_severities] if severity else []
     kev = 1 if kev == 1 else 0
     news = 1 if news == 1 else 0
+    highlighted = 1 if highlighted == 1 else 0
     valid_sorts = {"risk", "severity", "published"}
     if sort not in valid_sorts:
         sort = ""
@@ -277,6 +279,9 @@ def dashboard(
 
     risk_scores = score_cves(cves, news_counts)
 
+    if highlighted:
+        cves = [c for c in cves if risk_scores[c.cve_id].highlighted]
+
     # Python-side sort for risk score
     if sort == "risk" and dir:
         cves = sorted(cves, key=lambda c: risk_scores[c.cve_id].score, reverse=(dir == "desc"))
@@ -292,7 +297,7 @@ def dashboard(
             "risk_weights": RISK_WEIGHTS, "date_fmt": fmt, "q": q,
             "page": page, "total_pages": total_pages,
             "active_severities": active_severities,
-            "filter_kev": kev, "filter_news": news,
+            "filter_kev": kev, "filter_news": news, "filter_highlighted": highlighted,
             "sort_col": sort, "sort_dir": dir,
         },
     )
