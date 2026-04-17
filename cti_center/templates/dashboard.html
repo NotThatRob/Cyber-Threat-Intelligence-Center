@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Dashboard - Cyber Threat Intelligence Center{% endblock %}
+{% block title %}Dashboard · CTI Center{% endblock %}
 {% block content %}
 {% set sev_param = "&severity=" ~ (active_severities | join(",")) if active_severities else "" %}
 {% set kev_param = "&kev=1" if filter_kev else "" %}
@@ -9,23 +9,8 @@
 {% set q_param = "&q=" ~ (q | urlencode) if q else "" %}
 {% set base = "/?tab=" ~ active_tab %}
 {% set all_params = base ~ q_param ~ sev_param ~ kev_param ~ news_param ~ highlighted_param ~ sort_param %}
-<nav class="tabs">
-    <a href="{{ base }}{{ q_param }}{{ sev_param }}{{ kev_param }}{{ news_param }}{{ highlighted_param }}{{ sort_param }}" class="tab {% if active_tab == 'trending' %}active{% endif %}">Trending</a>
-    <a href="/?tab=recent{{ q_param }}{{ sev_param }}{{ kev_param }}{{ news_param }}{{ highlighted_param }}{{ sort_param }}" class="tab {% if active_tab == 'recent' %}active{% endif %}">Recent</a>
-    <a href="/?tab=all{{ q_param }}{{ sev_param }}{{ kev_param }}{{ news_param }}{{ highlighted_param }}{{ sort_param }}" class="tab {% if active_tab == 'all' %}active{% endif %}">All</a>
-</nav>
-<form class="search-form" method="get" action="/">
-    <input type="hidden" name="tab" value="{{ active_tab }}">
-    {% if active_severities %}<input type="hidden" name="severity" value="{{ active_severities | join(',') }}">{% endif %}
-    {% if filter_kev %}<input type="hidden" name="kev" value="1">{% endif %}
-    {% if filter_news %}<input type="hidden" name="news" value="1">{% endif %}
-    {% if filter_highlighted %}<input type="hidden" name="highlighted" value="1">{% endif %}
-    {% if sort_col %}<input type="hidden" name="sort" value="{{ sort_col }}">{% endif %}
-    {% if sort_dir %}<input type="hidden" name="dir" value="{{ sort_dir }}">{% endif %}
-    <input class="search-input" type="text" name="q" value="{{ q }}" placeholder="Search CVEs, products, keywords...">
-    <button class="search-btn" type="submit">Search</button>
-    {% if q %}<a href="{{ base }}{{ sev_param }}{{ kev_param }}{{ news_param }}{{ highlighted_param }}{{ sort_param }}" class="search-clear">Clear</a>{% endif %}
-</form>
+{% set last_updated = get_last_updated() %}
+
 {% set ns = namespace(critical=0, high=0, medium=0, low=0, exploited=0, in_news=0, highlighted=0) %}
 {% for cve in cves %}
     {% if cve.severity == 'CRITICAL' %}{% set ns.critical = ns.critical + 1 %}{% endif %}
@@ -37,112 +22,186 @@
     {% if risk_scores[cve.cve_id].highlighted %}{% set ns.highlighted = ns.highlighted + 1 %}{% endif %}
 {% endfor %}
 {% set has_filters = active_severities or filter_kev or filter_news or filter_highlighted %}
-<div class="filter-bar">
-    {# Severity pills #}
-    {% for sev in ["CRITICAL", "HIGH", "MEDIUM", "LOW"] %}
-        {% if sev in active_severities %}
-            {% set new_sevs = active_severities | reject("equalto", sev) | list %}
+
+<div class="page-head">
+    <div>
+        <div class="eyebrow">TRIAGE QUEUE · {{ last_updated.strftime('%a · %b %d') | upper if last_updated else 'LIVE' }}</div>
+        <h1>What matters right now.</h1>
+        <div class="page-sub">{{ cves | length }} CVEs surfaced across the {{ active_tab }} view. Sorted by CTI risk score — actively exploited, trending, and recently published vulnerabilities rise to the top.</div>
+    </div>
+    <div class="page-timestamp">
+        {% if last_updated %}
+        <div>LAST SYNC · {{ last_updated.strftime('%H:%M UTC') }}</div>
+        <div>STATUS · NOMINAL</div>
         {% else %}
-            {% set new_sevs = active_severities + [sev] %}
+        <div>AWAITING FIRST SYNC</div>
         {% endif %}
-        {% set sev_link = "&severity=" ~ (new_sevs | join(",")) if new_sevs else "" %}
-        <a href="{{ base }}{{ q_param }}{{ sev_link }}{{ kev_param }}{{ news_param }}{{ highlighted_param }}{{ sort_param }}"
-           class="filter-pill filter-pill-{{ sev | lower }} {% if sev in active_severities %}active{% endif %}">
-            {{ sev }}
-            {% if sev == 'CRITICAL' %}({{ ns.critical }}){% endif %}
-            {% if sev == 'HIGH' %}({{ ns.high }}){% endif %}
-            {% if sev == 'MEDIUM' %}({{ ns.medium }}){% endif %}
-            {% if sev == 'LOW' %}({{ ns.low }}){% endif %}
-        </a>
-    {% endfor %}
-    <span class="filter-sep"></span>
-    {# KEV toggle #}
-    <a href="{{ base }}{{ q_param }}{{ sev_param }}{% if not filter_kev %}&kev=1{% endif %}{{ news_param }}{{ highlighted_param }}{{ sort_param }}"
-       class="filter-pill filter-pill-kev {% if filter_kev %}active{% endif %}">
-        KEV ({{ ns.exploited }})
-    </a>
-    {# News toggle #}
-    <a href="{{ base }}{{ q_param }}{{ sev_param }}{{ kev_param }}{% if not filter_news %}&news=1{% endif %}{{ highlighted_param }}{{ sort_param }}"
-       class="filter-pill filter-pill-news {% if filter_news %}active{% endif %}">
-        In News ({{ ns.in_news }})
-    </a>
-    {# Highlighted toggle #}
-    <a href="{{ base }}{{ q_param }}{{ sev_param }}{{ kev_param }}{{ news_param }}{% if not filter_highlighted %}&highlighted=1{% endif %}{{ sort_param }}"
-       class="filter-pill filter-pill-highlighted {% if filter_highlighted %}active{% endif %}">
-        Highlighted ({{ ns.highlighted }})
-    </a>
-    {% if has_filters %}
-    <a href="{{ base }}{{ q_param }}{{ sort_param }}" class="filter-clear">Clear filters</a>
-    {% endif %}
+    </div>
 </div>
-<table>
-    <thead>
-        <tr>
-            <th>CVE ID</th>
-            <th>
-                {% if sort_col == 'risk' and sort_dir == 'desc' %}
-                    <a href="{{ base }}{{ q_param }}{{ sev_param }}{{ kev_param }}{{ news_param }}{{ highlighted_param }}&sort=risk&dir=asc" class="sort-link active">Risk <span class="sort-arrow">&#9660;</span></a>
-                {% elif sort_col == 'risk' and sort_dir == 'asc' %}
-                    <a href="{{ base }}{{ q_param }}{{ sev_param }}{{ kev_param }}{{ news_param }}{{ highlighted_param }}" class="sort-link active">Risk <span class="sort-arrow">&#9650;</span></a>
-                {% else %}
-                    <a href="{{ base }}{{ q_param }}{{ sev_param }}{{ kev_param }}{{ news_param }}{{ highlighted_param }}&sort=risk&dir=desc" class="sort-link">Risk</a>
-                {% endif %}
-            </th>
-            <th>
-                {% if sort_col == 'severity' and sort_dir == 'desc' %}
-                    <a href="{{ base }}{{ q_param }}{{ sev_param }}{{ kev_param }}{{ news_param }}{{ highlighted_param }}&sort=severity&dir=asc" class="sort-link active">Severity <span class="sort-arrow">&#9660;</span></a>
-                {% elif sort_col == 'severity' and sort_dir == 'asc' %}
-                    <a href="{{ base }}{{ q_param }}{{ sev_param }}{{ kev_param }}{{ news_param }}{{ highlighted_param }}" class="sort-link active">Severity <span class="sort-arrow">&#9650;</span></a>
-                {% else %}
-                    <a href="{{ base }}{{ q_param }}{{ sev_param }}{{ kev_param }}{{ news_param }}{{ highlighted_param }}&sort=severity&dir=desc" class="sort-link">Severity</a>
-                {% endif %}
-            </th>
-            <th>Product</th>
-            <th>
-                {% if sort_col == 'published' and sort_dir == 'desc' %}
-                    <a href="{{ base }}{{ q_param }}{{ sev_param }}{{ kev_param }}{{ news_param }}{{ highlighted_param }}&sort=published&dir=asc" class="sort-link active">Published <span class="sort-arrow">&#9660;</span></a>
-                {% elif sort_col == 'published' and sort_dir == 'asc' %}
-                    <a href="{{ base }}{{ q_param }}{{ sev_param }}{{ kev_param }}{{ news_param }}{{ highlighted_param }}" class="sort-link active">Published <span class="sort-arrow">&#9650;</span></a>
-                {% else %}
-                    <a href="{{ base }}{{ q_param }}{{ sev_param }}{{ kev_param }}{{ news_param }}{{ highlighted_param }}&sort=published&dir=desc" class="sort-link">Published</a>
-                {% endif %}
-            </th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for cve in cves %}
-        {% set rs = risk_scores[cve.cve_id] %}
-        <tr class="severity-{{ cve.severity | lower }}{% if rs.highlighted %} highlighted{% endif %}">
-            <td class="col-id">
-                <a href="/cve/{{ cve.cve_id }}">{{ cve.cve_id }}</a>
-                {% if cve.kev_date_added %}
-                <span class="badge-kev" title="CISA KEV — Due: {{ cve.kev_due_date | format_date(date_fmt) }}{% if cve.kev_ransomware == 'Known' %} | Ransomware: Known{% endif %}">KEV</span>
-                {% endif %}
-                {% if news_counts.get(cve.cve_id) %}
-                <a href="/cve/{{ cve.cve_id }}" class="badge-news">{{ news_counts[cve.cve_id] }}</a>
-                {% endif %}
-                {% if rs.why_it_matters %}
-                <div class="why-it-matters">{{ rs.why_it_matters }}</div>
-                {% endif %}
-            </td>
-            {% set w = risk_weights %}
-            <td class="col-nowrap"><span class="risk-score risk-score-{{ rs.label }}" title="Risk Score Breakdown&#10;&#10;CVSS Base:        {{ rs.cvss_component | round(1) }} / {{ w.cvss | int }}&#10;Exploit Maturity:  {{ rs.exploit_component | round(1) }} / {{ w.exploit | int }}&#10;News Velocity:     {{ rs.news_component | round(1) }} / {{ w.news | int }}&#10;Recency:           {{ rs.recency_component | round(1) }} / {{ w.recency | int }}&#10;KEV Urgency:       {{ rs.urgency_component | round(1) }} / {{ w.urgency | int }}{% if rs.factors %}&#10;&#10;{% for factor in rs.factors %}&#8226; {{ factor }}{% if not loop.last %}&#10;{% endif %}{% endfor %}{% endif %}">{{ rs.score }}</span></td>
-            <td class="col-nowrap severity-cell">{{ cve.severity }} ({{ cve.cvss_score }})</td>
-            <td class="col-product" title="{{ cve.affected_product }}">{% if cve.affected_product != 'Unknown' %}{{ cve.affected_product | truncate(30, True) }}{% else %}<span class="text-muted" title="{{ cve.description | truncate(200, True) }}">{{ cve.description | truncate(40, True) }}</span>{% endif %}</td>
-            <td class="col-nowrap">{{ cve.date_published | format_date(date_fmt) }}</td>
-        </tr>
-        {% else %}
-        <tr>
-            <td colspan="5" class="empty-state">No CVEs match this filter.</td>
-        </tr>
+
+{# Stats strip — counts drawn from the currently-visible queue. #}
+<div class="stats">
+    <div class="stat">
+        <div class="stat-label">KEV · IN VIEW</div>
+        <div class="stat-value">{{ ns.exploited }}</div>
+        <div class="stat-spark" aria-hidden="true"></div>
+    </div>
+    <div class="stat">
+        <div class="stat-label">CRITICAL</div>
+        <div class="stat-value" style="color: var(--sev-critical);">{{ ns.critical }}</div>
+        <div class="stat-spark" aria-hidden="true"></div>
+    </div>
+    <div class="stat">
+        <div class="stat-label">HIGH</div>
+        <div class="stat-value" style="color: var(--sev-high);">{{ ns.high }}</div>
+        <div class="stat-spark" aria-hidden="true"></div>
+    </div>
+    <div class="stat">
+        <div class="stat-label">IN NEWS</div>
+        <div class="stat-value" style="color: var(--accent-3);">{{ ns.in_news }}</div>
+        <div class="stat-spark" aria-hidden="true"></div>
+    </div>
+    <div class="stat">
+        <div class="stat-label">HIGHLIGHTED</div>
+        <div class="stat-value" style="color: var(--accent);">{{ ns.highlighted }}</div>
+        <div class="stat-spark" aria-hidden="true"></div>
+    </div>
+</div>
+
+<nav class="tabs">
+    <a href="/?tab=trending{{ q_param }}{{ sev_param }}{{ kev_param }}{{ news_param }}{{ highlighted_param }}{{ sort_param }}" class="tab {% if active_tab == 'trending' %}active{% endif %}">Trending</a>
+    <a href="/?tab=recent{{ q_param }}{{ sev_param }}{{ kev_param }}{{ news_param }}{{ highlighted_param }}{{ sort_param }}" class="tab {% if active_tab == 'recent' %}active{% endif %}">Recent</a>
+    <a href="/?tab=all{{ q_param }}{{ sev_param }}{{ kev_param }}{{ news_param }}{{ highlighted_param }}{{ sort_param }}" class="tab {% if active_tab == 'all' %}active{% endif %}">All</a>
+</nav>
+
+<form class="toolbar" method="get" action="/">
+    <input type="hidden" name="tab" value="{{ active_tab }}">
+    {% if active_severities %}<input type="hidden" name="severity" value="{{ active_severities | join(',') }}">{% endif %}
+    {% if filter_kev %}<input type="hidden" name="kev" value="1">{% endif %}
+    {% if filter_news %}<input type="hidden" name="news" value="1">{% endif %}
+    {% if filter_highlighted %}<input type="hidden" name="highlighted" value="1">{% endif %}
+    {% if sort_col %}<input type="hidden" name="sort" value="{{ sort_col }}">{% endif %}
+    {% if sort_dir %}<input type="hidden" name="dir" value="{{ sort_dir }}">{% endif %}
+    <label class="search">
+        <span>⌕</span>
+        <input type="text" name="q" value="{{ q }}" placeholder="Search CVE, product, description…">
+        <span class="kbd">↵</span>
+    </label>
+    <div class="toolbar-sep"></div>
+    <div class="chip-group">
+        {% for sev in ["CRITICAL", "HIGH", "MEDIUM", "LOW"] %}
+            {% if sev in active_severities %}
+                {% set new_sevs = active_severities | reject("equalto", sev) | list %}
+            {% else %}
+                {% set new_sevs = active_severities + [sev] %}
+            {% endif %}
+            {% set sev_link = "&severity=" ~ (new_sevs | join(",")) if new_sevs else "" %}
+            <a href="{{ base }}{{ q_param }}{{ sev_link }}{{ kev_param }}{{ news_param }}{{ highlighted_param }}{{ sort_param }}" class="chip {% if sev in active_severities %}active{% endif %}">
+                {{ sev }}
+                {% set c = ns.critical if sev == 'CRITICAL' else (ns.high if sev == 'HIGH' else (ns.medium if sev == 'MEDIUM' else ns.low)) %}
+                <span class="count">{{ c }}</span>
+            </a>
         {% endfor %}
-    </tbody>
-</table>
+        <a href="{{ base }}{{ q_param }}{{ sev_param }}{% if not filter_kev %}&kev=1{% endif %}{{ news_param }}{{ highlighted_param }}{{ sort_param }}" class="chip {% if filter_kev %}active{% endif %}">KEV<span class="count">{{ ns.exploited }}</span></a>
+        <a href="{{ base }}{{ q_param }}{{ sev_param }}{{ kev_param }}{% if not filter_news %}&news=1{% endif %}{{ highlighted_param }}{{ sort_param }}" class="chip {% if filter_news %}active{% endif %}">NEWS<span class="count">{{ ns.in_news }}</span></a>
+        <a href="{{ base }}{{ q_param }}{{ sev_param }}{{ kev_param }}{{ news_param }}{% if not filter_highlighted %}&highlighted=1{% endif %}{{ sort_param }}" class="chip {% if filter_highlighted %}active{% endif %}">HIGHLIGHTED<span class="count">{{ ns.highlighted }}</span></a>
+        {% if has_filters %}<a href="{{ base }}{{ q_param }}{{ sort_param }}" class="chip">CLEAR</a>{% endif %}
+    </div>
+    <div style="margin-left: auto; display: flex; gap: 6px;">
+        <button class="btn primary" type="submit">Search</button>
+    </div>
+</form>
+
+<div class="queue">
+    <div class="qhead">
+        <span></span>
+        <span>CVE ID</span>
+        {% if sort_col == 'risk' and sort_dir == 'desc' %}
+            <a href="{{ base }}{{ q_param }}{{ sev_param }}{{ kev_param }}{{ news_param }}{{ highlighted_param }}&sort=risk&dir=asc" class="active asc">Risk</a>
+        {% elif sort_col == 'risk' and sort_dir == 'asc' %}
+            <a href="{{ base }}{{ q_param }}{{ sev_param }}{{ kev_param }}{{ news_param }}{{ highlighted_param }}" class="active">Risk</a>
+        {% else %}
+            <a href="{{ base }}{{ q_param }}{{ sev_param }}{{ kev_param }}{{ news_param }}{{ highlighted_param }}&sort=risk&dir=desc">Risk</a>
+        {% endif %}
+        <span>Title / Vector</span>
+        {% if sort_col == 'severity' and sort_dir == 'desc' %}
+            <a href="{{ base }}{{ q_param }}{{ sev_param }}{{ kev_param }}{{ news_param }}{{ highlighted_param }}&sort=severity&dir=asc" class="active asc">Severity</a>
+        {% elif sort_col == 'severity' and sort_dir == 'asc' %}
+            <a href="{{ base }}{{ q_param }}{{ sev_param }}{{ kev_param }}{{ news_param }}{{ highlighted_param }}" class="active">Severity</a>
+        {% else %}
+            <a href="{{ base }}{{ q_param }}{{ sev_param }}{{ kev_param }}{{ news_param }}{{ highlighted_param }}&sort=severity&dir=desc">Severity</a>
+        {% endif %}
+        <span>Affected</span>
+        {% if sort_col == 'published' and sort_dir == 'desc' %}
+            <a href="{{ base }}{{ q_param }}{{ sev_param }}{{ kev_param }}{{ news_param }}{{ highlighted_param }}&sort=published&dir=asc" class="active asc">Published</a>
+        {% elif sort_col == 'published' and sort_dir == 'asc' %}
+            <a href="{{ base }}{{ q_param }}{{ sev_param }}{{ kev_param }}{{ news_param }}{{ highlighted_param }}" class="active">Published</a>
+        {% else %}
+            <a href="{{ base }}{{ q_param }}{{ sev_param }}{{ kev_param }}{{ news_param }}{{ highlighted_param }}&sort=published&dir=desc">Published</a>
+        {% endif %}
+        <span>Signal</span>
+    </div>
+    {% for cve in cves %}
+    {% set rs = risk_scores[cve.cve_id] %}
+    {% set nc = news_counts.get(cve.cve_id, 0) %}
+    {% set exp_level = (2 if cve.kev_date_added else 0) + (1 if cve.kev_ransomware == 'Known' else 0) + (1 if nc > 0 else 0) %}
+    {% set parts = cve.cve_id.split('-') %}
+    <a class="qrow {% if rs.highlighted %}highlighted{% endif %}" href="/cve/{{ cve.cve_id }}">
+        <span class="sev-bar {{ cve.severity | lower }}"></span>
+        <div>
+            <div class="cve-id">
+                {% if parts | length == 3 %}<span class="year">{{ parts[0] }}-{{ parts[1] }}-</span>{{ parts[2] }}{% else %}{{ cve.cve_id }}{% endif %}
+            </div>
+            <div class="tag-row">
+                {% if cve.kev_date_added %}<span class="tag kev">KEV</span>{% endif %}
+                {% if cve.kev_ransomware == 'Known' %}<span class="tag rw">RW</span>{% endif %}
+                {% if nc %}<span class="tag news">NEWS {{ nc }}</span>{% endif %}
+                {% if rs.highlighted %}<span class="tag trend">HOT</span>{% endif %}
+            </div>
+        </div>
+        <div class="risk-cell">
+            <span class="risk-num t-{{ rs.label }}" title="CVSS {{ rs.cvss_component | round(1) }}/{{ risk_weights.cvss | int }} · Exploit {{ rs.exploit_component | round(1) }}/{{ risk_weights.exploit | int }} · News {{ rs.news_component | round(1) }}/{{ risk_weights.news | int }} · Recency {{ rs.recency_component | round(1) }}/{{ risk_weights.recency | int }} · Urgency {{ rs.urgency_component | round(1) }}/{{ risk_weights.urgency | int }}">{{ rs.score }}</span>
+            <span class="risk-meter" style="--v: {{ rs.score }}%;"></span>
+        </div>
+        <div>
+            <div class="title">{{ cve.description | truncate(140, True) }}</div>
+            {% if cve.cvss_vector %}<div class="title-sub mono">{{ cve.cvss_vector }}</div>{% endif %}
+            {% if rs.why_it_matters %}<div class="why-it-matters">{{ rs.why_it_matters }}</div>{% endif %}
+        </div>
+        <div>
+            <div class="severity-lbl {{ cve.severity | lower }}">{{ cve.severity }}</div>
+            <div class="severity-cvss">CVSS {{ cve.cvss_score if cve.cvss_score else '—' }}</div>
+        </div>
+        <div class="product" title="{{ cve.affected_product }}">
+            {% if cve.affected_product and cve.affected_product != 'Unknown' %}
+                {{ cve.affected_product | truncate(30, True) }}
+            {% else %}
+                <span class="dimmer">Unknown</span>
+            {% endif %}
+        </div>
+        <div class="age">
+            {{ cve.date_published | format_date(date_fmt) }}
+            <span class="rel">{{ cve.date_published | days_ago }} ago</span>
+        </div>
+        <div class="exp-cell">
+            <span class="exp-dots">
+                {% for i in range(4) %}<span class="exp-dot {% if i < exp_level %}on{% endif %}"></span>{% endfor %}
+            </span>
+            <span class="mono dim" style="font-size: 10.5px;">
+                {% if exp_level >= 4 %}ACTIVE{% elif exp_level >= 2 %}ARMED{% elif exp_level == 1 %}WATCH{% else %}—{% endif %}
+            </span>
+        </div>
+    </a>
+    {% else %}
+    <div class="qrow" style="cursor: default; padding: 40px 16px; text-align: center; color: var(--fg-2); font-style: italic; display: block;">No CVEs match this filter.</div>
+    {% endfor %}
+</div>
+
 {% if total_pages > 1 %}
 <nav class="pagination">
-    {% if page > 1 %}<a href="{{ all_params }}&page={{ page - 1 }}">&larr; Prev</a>{% endif %}
-    <span class="page-info">Page {{ page }} of {{ total_pages }}</span>
-    {% if page < total_pages %}<a href="{{ all_params }}&page={{ page + 1 }}">Next &rarr;</a>{% endif %}
+    {% if page > 1 %}<a href="{{ all_params }}&page={{ page - 1 }}">← Prev</a>{% endif %}
+    <span>Page {{ page }} of {{ total_pages }}</span>
+    {% if page < total_pages %}<a href="{{ all_params }}&page={{ page + 1 }}">Next →</a>{% endif %}
 </nav>
 {% endif %}
 {% endblock %}

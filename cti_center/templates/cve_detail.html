@@ -1,65 +1,160 @@
 {% extends "base.html" %}
-{% block title %}{{ cve.cve_id }} - Cyber Threat Intelligence Center{% endblock %}
+{% block title %}{{ cve.cve_id }} · CTI Center{% endblock %}
 {% block content %}
-<a href="{{ back_url }}" class="back-link">&larr; Back</a>
-<div class="detail-header">
-    <h2>{{ cve.cve_id }}</h2>
-    {% set rs = risk_score %}
-    {% set w = risk_weights %}
-    <span class="risk-score risk-score-{{ rs.label }}" title="Risk Score Breakdown&#10;&#10;CVSS Base:        {{ rs.cvss_component | round(1) }} / {{ w.cvss | int }}&#10;Exploit Maturity:  {{ rs.exploit_component | round(1) }} / {{ w.exploit | int }}&#10;News Velocity:     {{ rs.news_component | round(1) }} / {{ w.news | int }}&#10;Recency:           {{ rs.recency_component | round(1) }} / {{ w.recency | int }}&#10;KEV Urgency:       {{ rs.urgency_component | round(1) }} / {{ w.urgency | int }}">{{ rs.score }}</span>
+{% set rs = risk_score %}
+{% set w = risk_weights %}
+{% set nc = articles | length %}
+{% set parts = cve.cve_id.split('-') %}
+
+<a href="{{ back_url }}" class="back-link">← Back to triage</a>
+
+<div class="detail-head">
+    <div>
+        <div class="eyebrow" style="font-family: var(--font-mono); font-size: 11px; color: var(--accent); letter-spacing: .14em; text-transform: uppercase; margin-bottom: 12px;">CVE · DETAIL</div>
+        <div class="detail-cveid">
+            <span class="mono chrom" data-t="{{ cve.cve_id }}">{{ cve.cve_id }}</span>
+        </div>
+        <h2 class="detail-title">{{ cve.affected_product if cve.affected_product and cve.affected_product != 'Unknown' else cve.cve_id }}</h2>
+        <p class="detail-desc">{{ cve.description }}</p>
+        <div class="tag-row" style="margin-top: 18px;">
+            {% if cve.kev_date_added %}<span class="tag kev">KEV</span>{% endif %}
+            {% if cve.kev_ransomware == 'Known' %}<span class="tag rw">RANSOMWARE</span>{% endif %}
+            {% if nc %}<span class="tag news">NEWS · {{ nc }}</span>{% endif %}
+            {% if rs.highlighted %}<span class="tag trend">HIGHLIGHTED</span>{% endif %}
+        </div>
+    </div>
+
+    <aside class="risk-panel">
+        <span class="upper">CTI RISK SCORE</span>
+        <div class="risk-big t-{{ rs.label }}">
+            {{ rs.score }}<span class="denom">/ 100</span>
+        </div>
+        <div class="risk-bar" style="--v: {{ rs.score }}%;"></div>
+        <div class="upper" style="color: var(--fg-2); font-family: var(--font-mono); font-size: 10.5px; margin-top: 4px;">
+            TIER · {{ rs.label | upper }}
+        </div>
+        <div class="risk-breakdown">
+            <span>CVSS base</span><span class="v">{{ rs.cvss_component | round(1) }} / {{ w.cvss | int }}</span>
+            <span>Exploit maturity</span><span class="v">{{ rs.exploit_component | round(1) }} / {{ w.exploit | int }}</span>
+            <span>News velocity</span><span class="v">{{ rs.news_component | round(1) }} / {{ w.news | int }}</span>
+            <span>Recency</span><span class="v">{{ rs.recency_component | round(1) }} / {{ w.recency | int }}</span>
+            <span>KEV urgency</span><span class="v">{{ rs.urgency_component | round(1) }} / {{ w.urgency | int }}</span>
+        </div>
+    </aside>
 </div>
-<p class="detail-description">{{ cve.description }}</p>
+
 {% if rs.why_it_matters %}
-<div class="why-it-matters-banner">
-    <strong>Why this matters:</strong> {{ rs.why_it_matters }}
+<div class="why">
+    <span class="why-label">WHY THIS MATTERS</span>
+    <div class="why-body">{{ rs.why_it_matters }}</div>
 </div>
 {% endif %}
-<div class="detail-meta">
-    <div><span class="meta-label">Severity</span> <span class="severity-{{ cve.severity | lower }}-text">{{ cve.severity }} ({{ cve.cvss_score }})</span></div>
-    {% if cve.cvss_vector %}<div><span class="meta-label">Vector</span> <span class="cvss-vector">{{ cve.cvss_vector }}</span></div>{% endif %}
-    <div><span class="meta-label">Published</span> {{ cve.date_published | format_date(date_fmt) }}</div>
-    <div><span class="meta-label">Product</span> {{ cve.affected_product }}</div>
-    <div><span class="meta-label">Source</span> <a href="{{ cve.source_url | safe_url }}" target="_blank" rel="noopener">View on NVD &rarr;</a></div>
-    {% if cve.cwe_ids %}<div><span class="meta-label">Weakness</span> {{ cve.cwe_ids }}</div>{% endif %}
+
+<div class="meta-grid">
+    <div class="cell">
+        <span class="k">Severity</span>
+        <span class="v severity-lbl {{ cve.severity | lower }}">{{ cve.severity }}{% if cve.cvss_score %} · {{ cve.cvss_score }}{% endif %}</span>
+    </div>
+    <div class="cell">
+        <span class="k">Published</span>
+        <span class="v">{{ cve.date_published | format_date(date_fmt) if cve.date_published else '—' }}</span>
+    </div>
+    <div class="cell">
+        <span class="k">Weakness</span>
+        <span class="v">{{ cve.cwe_ids if cve.cwe_ids else '—' }}</span>
+    </div>
+    <div class="cell">
+        <span class="k">Source</span>
+        <span class="v"><a href="{{ cve.source_url | safe_url }}" target="_blank" rel="noopener">NVD ↗</a></span>
+    </div>
+    <div class="cell">
+        <span class="k">Vector</span>
+        <span class="v">{{ cve.cvss_vector if cve.cvss_vector else '—' }}</span>
+    </div>
+    <div class="cell">
+        <span class="k">Product</span>
+        <span class="v">{{ cve.affected_product if cve.affected_product and cve.affected_product != 'Unknown' else '—' }}</span>
+    </div>
+    <div class="cell">
+        <span class="k">Vendor</span>
+        <span class="v">—</span>
+    </div>
+    <div class="cell">
+        <span class="k">KEV</span>
+        <span class="v">{{ cve.kev_date_added | format_date(date_fmt) if cve.kev_date_added else '—' }}</span>
+    </div>
 </div>
+
 {% if cve.kev_date_added %}
-<div class="detail-kev">
-    <strong>Actively Exploited (CISA KEV)</strong>
-    {% if cve.kev_required_action %}<p>{{ cve.kev_required_action }}</p>{% endif %}
-    <div class="detail-meta">
-        <div><span class="meta-label">Added</span> {{ cve.kev_date_added | format_date(date_fmt) }}</div>
-        <div><span class="meta-label">Due Date</span> {{ cve.kev_due_date | format_date(date_fmt) }}</div>
-        {% if cve.kev_ransomware == 'Known' %}<div><span class="meta-label">Ransomware</span> Known</div>{% endif %}
+<div class="kev-panel">
+    <div class="kev-title"><span class="blink"></span> ACTIVELY EXPLOITED · CISA KEV</div>
+    {% if cve.kev_required_action %}
+    <div class="kev-body">{{ cve.kev_required_action }}</div>
+    {% endif %}
+    <div class="kev-dates">
+        <div>
+            <span class="lbl">Added</span>
+            {{ cve.kev_date_added | format_date(date_fmt) }}
+        </div>
+        <div>
+            <span class="lbl">Due date</span>
+            {% set overdue = cve.kev_due_date and (cve.kev_due_date < today_date) %}
+            <span class="{% if overdue %}overdue{% endif %}">
+                {{ cve.kev_due_date | format_date(date_fmt) if cve.kev_due_date else '—' }}
+                {% if overdue %} · OVERDUE{% endif %}
+            </span>
+        </div>
+        <div>
+            <span class="lbl">Ransomware</span>
+            {{ cve.kev_ransomware if cve.kev_ransomware else 'Unknown' }}
+        </div>
     </div>
 </div>
 {% endif %}
-{% if rs.factors %}
-<div class="detail-section">
-    <h3>Risk Factors</h3>
-    <ul class="detail-factors">
-        {% for factor in rs.factors %}
-        <li>{{ factor }}</li>
-        {% endfor %}
-    </ul>
-</div>
-{% endif %}
-{% if articles %}
-<div class="detail-section">
-    <h3>News Coverage</h3>
-    <table>
-        <thead>
-            <tr><th>Title</th><th>Source</th><th>Published</th></tr>
-        </thead>
-        <tbody>
-            {% for article in articles %}
-            <tr>
-                <td><a href="{{ article.url | safe_url }}" target="_blank" rel="noopener">{{ article.title }}</a></td>
-                <td>{{ article.source_name }}</td>
-                <td class="col-nowrap">{{ article.published_date | format_date(date_fmt) }}</td>
-            </tr>
+
+<div class="detail-two">
+    <div>
+        <div class="section-title"><h2>Risk factors</h2></div>
+        {% if rs.factors %}
+        <ul class="risk-factors">
+            {% for factor in rs.factors %}
+            <li>{{ factor }}</li>
             {% endfor %}
-        </tbody>
-    </table>
+        </ul>
+        {% else %}
+        <p class="dim" style="font-style: italic;">No contributing factors flagged by the scoring engine.</p>
+        {% endif %}
+    </div>
+    <div>
+        <div class="section-title"><h2>Activity timeline</h2></div>
+        <ul class="timeline">
+            {% if cve.date_published %}
+            <li class="tl-item">
+                <div class="tl-date">{{ cve.date_published | format_date(date_fmt) | upper }}</div>
+                <div class="tl-event">Published to NVD</div>
+                <div class="tl-src">SOURCE · NVD</div>
+            </li>
+            {% endif %}
+            {% if cve.kev_date_added %}
+            <li class="tl-item hot">
+                <div class="tl-date">{{ cve.kev_date_added | format_date(date_fmt) | upper }}</div>
+                <div class="tl-event">Added to CISA KEV — actively exploited</div>
+                <div class="tl-src">SOURCE · CISA</div>
+            </li>
+            {% endif %}
+            {% for article in articles[:6] %}
+            <li class="tl-item {% if loop.index <= 2 %}hot{% endif %}">
+                <div class="tl-date">{{ article.published_date | format_date(date_fmt) | upper if article.published_date else '—' }}</div>
+                <div class="tl-event"><a href="{{ article.url | safe_url }}" target="_blank" rel="noopener">{{ article.title }}</a></div>
+                <div class="tl-src">SOURCE · {{ article.source_name | upper }}</div>
+            </li>
+            {% endfor %}
+            {% if not cve.date_published and not cve.kev_date_added and not articles %}
+            <li class="tl-item">
+                <div class="tl-event dim" style="font-style: italic;">No timeline events recorded.</div>
+            </li>
+            {% endif %}
+        </ul>
+    </div>
 </div>
-{% endif %}
 {% endblock %}

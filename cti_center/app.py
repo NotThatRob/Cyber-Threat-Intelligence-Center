@@ -61,7 +61,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
         response.headers["Content-Security-Policy"] = (
             "default-src 'self'; "
-            "style-src 'self' https://fonts.googleapis.com; "
+            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
             "font-src https://fonts.gstatic.com"
         )
         return response
@@ -123,6 +123,25 @@ def _time_ago(value) -> str:
 
 
 templates.env.filters["time_ago"] = _time_ago
+
+
+def _days_ago(value) -> str:
+    """Jinja2 filter: render a date as 'Nd' relative to today (e.g. '3d')."""
+    if value is None:
+        return ""
+    try:
+        delta = date.today() - value
+    except TypeError:
+        return ""
+    days = delta.days
+    if days < 0:
+        return "0d"
+    if days == 0:
+        return "today"
+    return f"{days}d"
+
+
+templates.env.filters["days_ago"] = _days_ago
 
 
 templates.env.globals["get_last_updated"] = get_last_updated
@@ -337,7 +356,7 @@ def cve_detail(
     fmt = date_fmt if date_fmt in ("us", "eu") else "us"
     return templates.TemplateResponse(
         "cve_detail.html",
-        {"request": request, "cve": cve, "risk_score": risk_score, "articles": articles, "risk_weights": RISK_WEIGHTS, "date_fmt": fmt, "back_url": back_url},
+        {"request": request, "cve": cve, "risk_score": risk_score, "articles": articles, "risk_weights": RISK_WEIGHTS, "date_fmt": fmt, "back_url": back_url, "today_date": date.today()},
     )
 
 

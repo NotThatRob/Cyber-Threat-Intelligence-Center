@@ -1,38 +1,45 @@
 {% extends "base.html" %}
-{% block title %}News - Cyber Threat Intelligence Center{% endblock %}
+{% block title %}News · CTI Center{% endblock %}
 {% block content %}
-<h2>Security News</h2>
+{% set total = articles | length %}
+{% set with_cves = namespace(n=0) %}
+{% for a in articles %}{% if article_cves.get(a.id) %}{% set with_cves.n = with_cves.n + 1 %}{% endif %}{% endfor %}
+{% set without_cves = total - with_cves.n %}
+
+<div class="page-head">
+    <div>
+        <div class="eyebrow">SECURITY NEWS · CORRELATED</div>
+        <h1>The intel, auto-linked to CVEs.</h1>
+        <div class="page-sub">Articles from tracked RSS feeds. CVE IDs mentioned in headlines or bodies are matched to the triage queue so context follows the vulnerability.</div>
+    </div>
+</div>
+
 <nav class="tabs">
-    <a href="/news?has_cves=all" class="tab {% if has_cves == 'all' %}active{% endif %}">All</a>
-    <a href="/news?has_cves=yes" class="tab {% if has_cves == 'yes' %}active{% endif %}">With CVEs</a>
-    <a href="/news?has_cves=no" class="tab {% if has_cves == 'no' %}active{% endif %}">Without CVEs</a>
+    <a href="/news?has_cves=all" class="tab {% if has_cves == 'all' %}active{% endif %}">ALL · {{ total }}</a>
+    <a href="/news?has_cves=yes" class="tab {% if has_cves == 'yes' %}active{% endif %}">WITH CVES · {{ with_cves.n }}</a>
+    <a href="/news?has_cves=no" class="tab {% if has_cves == 'no' %}active{% endif %}">CONTEXT ONLY · {{ without_cves }}</a>
 </nav>
-<table>
-    <thead>
-        <tr>
-            <th>Title</th>
-            <th>Source</th>
-            <th>Published</th>
-            <th>Related CVEs</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for article in articles %}
-        <tr>
-            <td><a href="{{ article.url | safe_url }}" target="_blank" rel="noopener" {% if article.summary %}title="{{ article.summary | truncate(200, True) }}"{% endif %}>{{ article.title }}</a></td>
-            <td>{{ article.source_name }}</td>
-            <td>{{ article.published_date | format_date(date_fmt) }}</td>
-            <td>
-                {% for cve_id in article_cves.get(article.id, []) %}
-                <a href="/cve/{{ cve_id }}">{{ cve_id }}</a>{% if not loop.last %}, {% endif %}
-                {% endfor %}
-            </td>
-        </tr>
-        {% else %}
-        <tr>
-            <td colspan="4" class="empty-state">No news articles yet. Articles will appear after the next background fetch.</td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
+
+<div class="news-list">
+    {% for article in articles %}
+    {% set linked = article_cves.get(article.id, []) %}
+    <div class="news-row">
+        <div>
+            <a class="news-title" href="{{ article.url | safe_url }}" target="_blank" rel="noopener"{% if article.summary %} title="{{ article.summary | truncate(200, True) }}"{% endif %}>{{ article.title }}</a>
+            {% if article.summary %}<div class="news-meta">{{ article.summary | truncate(140, True) }}</div>{% endif %}
+        </div>
+        <div class="news-source">{{ article.source_name }}</div>
+        <div class="news-date">{{ article.published_date | format_date(date_fmt) if article.published_date else '—' }}</div>
+        <div class="news-cves">
+            {% for cve_id in linked[:6] %}
+                <a class="cve-chip" href="/cve/{{ cve_id }}">{{ cve_id }}</a>
+            {% endfor %}
+            {% if linked | length > 6 %}<span class="cve-chip">+{{ linked | length - 6 }}</span>{% endif %}
+            {% if not linked %}<span class="dimmer mono" style="font-size: 10.5px;">—</span>{% endif %}
+        </div>
+    </div>
+    {% else %}
+    <div class="empty-state">No news articles yet. Articles will appear after the next background fetch.</div>
+    {% endfor %}
+</div>
 {% endblock %}

@@ -3,25 +3,41 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Cyber Threat Intelligence Center{% endblock %}</title>
+    <title>{% block title %}CTI Center{% endblock %}</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700&family=Lexend:wght@400;600&display=swap">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Space+Grotesk:wght@400;500;600;700&family=Newsreader:wght@400;500;600&display=swap">
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-    <header>
-        <h1>Cyber Threat Intelligence Center</h1>
-        <nav class="header-nav">
-            <a href="/">Dashboard</a>
-            <a href="/news">News</a>
-            {% set last_updated = get_last_updated() %}
-            {% if last_updated %}<span class="last-updated" title="{{ last_updated.strftime('%Y-%m-%d %H:%M UTC') }}">Updated {{ last_updated | time_ago }}</span>{% endif %}
-            <a href="/settings/date-format" class="date-toggle" title="Toggle date format">{{ date_fmt | default("us") | upper }}</a>
+    {% set last_updated = get_last_updated() %}
+    <header class="topbar">
+        <a href="/" class="brand">
+            <span class="brand-mark"></span>
+            <span>CTI Center</span>
+            <span class="brand-sub">TRIAGE</span>
+        </a>
+        <nav class="nav">
+            <a href="/" class="{% if request.url.path == '/' %}active{% endif %}">Dashboard</a>
+            <a href="/news" class="{% if request.url.path == '/news' %}active{% endif %}">News</a>
         </nav>
+        <div class="topbar-right">
+            <span class="live-dot" aria-hidden="true"></span>
+            {% if last_updated %}
+                <span class="last-updated" title="{{ last_updated.strftime('%Y-%m-%d %H:%M UTC') }}">SYNC · {{ last_updated | time_ago }}</span>
+            {% else %}
+                <span class="last-updated">SYNC · —</span>
+            {% endif %}
+            <a href="/settings/date-format" class="date-toggle" title="Toggle date format">{{ date_fmt | default("us") | upper }}</a>
+        </div>
     </header>
-    <main>
+    <main class="app">
         {% block content %}{% endblock %}
+        <div class="foot">
+            <span>CTI CENTER · v1</span>
+            <span>DATA · NVD · CISA KEV · GHSA · RSS</span>
+        </div>
     </main>
+    <script src="/static/tweaks.js"></script>
 </body>
 </html>

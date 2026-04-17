@@ -192,3 +192,4 @@ api.env
 HANDOFF.md
 .playwright*
 *.png
+/design_handoff_cti_center
