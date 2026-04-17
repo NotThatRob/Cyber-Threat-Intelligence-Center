@@ -8,6 +8,8 @@ CTI-Center is a Cyber Threat Intelligence web application that aggregates CVE da
 
 ## Commands
 
+Requires Python 3.12+ (pinned in `pyproject.toml`).
+
 ```bash
 # Install (editable, with dev deps)
 pip install -e ".[dev]"
@@ -34,10 +36,19 @@ No test suite exists yet — pytest is a dev dependency but no tests have been w
 
 ### Data Flow
 
-1. **Ingestion** — Source-specific fetchers (`nvd.py`, `kev.py`, `ghsa.py`, `news.py`, `mitre.py`) pull data from external APIs/feeds
+1. **Ingestion** — Source-specific fetchers (`nvd.py`, `kev.py`, `ghsa.py`, `news.py`) pull data from external APIs/feeds. `mitre.py` is an *enrichment* step, not a primary fetcher — it only queries CVEs with missing CVSS scores (typically KEV-only records) and fills in score, severity, description, and product.
 2. **Upsert** — `database.py` provides `upsert_cves()`, `upsert_kev()`, `upsert_news()` which insert-or-update records, handling deduplication and stale record enrichment
 3. **Scoring** — `scoring.py` computes a composite risk score (CVSS 35%, exploit maturity 30%, news velocity 15%, recency 10%, KEV urgency 10%)
-4. **Presentation** — `app.py` serves three pages via Jinja2 templates: dashboard (`/`), CVE detail (`/cve/{id}`), news (`/news`)
+4. **Presentation** — `app.py` serves three routes via Jinja2 templates: dashboard (`/`), CVE detail (`/cve/{id}`), news (`/news`). The dashboard itself has three tabs (Trending / Recent / All) on the single `/` route.
+
+### Supporting Modules
+
+- `utils.py` — shared helpers (date parsing, URL validation, etc.)
+- `logging_config.py` — sets up a rotating file handler at `logs/cti_center.log` (5 MB × 3 backups; DEBUG to file, INFO to console). The `logs/` directory is created on startup.
+
+### First-Boot Behavior
+
+On first startup, `cti_center.db` is auto-created and seeded with sample data, then a full fetch cycle (all sources) runs in a background thread. This means the DB appears "magically" after first `uvicorn` launch — no manual seeding required.
 
 ### Scheduling
 
@@ -48,6 +59,7 @@ No test suite exists yet — pytest is a dev dependency but no tests have been w
 - **SQLAlchemy 2.0 mapped_column style** — Models use `Mapped[T]` type annotations, not legacy Column()
 - **Database migrations** — Lightweight, inline in `database.py:apply_migrations()` using raw SQL (PRAGMA-based column detection + ALTER TABLE). No Alembic.
 - **Upsert logic** — `upsert_cves()` updates existing records only when incoming data is "better" (e.g., replaces CVSS 0.0 with a real score, replaces "Unknown" product). CVE news links use SQLite `INSERT OR IGNORE`.
+- **Risk weight invariant** — `RISK_WEIGHTS` in `scoring.py` must sum to 100. Callers can override per-call via the `weights` kwarg on `compute_risk_score()` / `score_cves()` without mutating the global default.
 - **API keys** — Optional, loaded from `api.env` file or environment variables (`NVD_API_KEY`, `GITHUB_TOKEN`). Never committed.
 - **Security middleware** — `SecurityHeadersMiddleware` adds CSP, X-Frame-Options, etc. URL validation in templates via `safe_url` filter (blocks javascript:/data: protocols). Open-redirect protection on referer-based redirects.
 
@@ -61,3 +73,7 @@ Single SQLite file `cti_center.db` at project root. Three tables:
 ### Frontend
 
 Server-rendered HTML with no JS framework. Single `static/style.css`. Templates in `cti_center/templates/` extend `base.html`. Custom Jinja2 filters: `format_date`, `time_ago`, `safe_url`.
+
+### Deployment Gotcha
+
+Multi-worker uvicorn (`--workers N`) spawns one APScheduler per worker → duplicate fetches from every worker on every interval. For production, either run with a single worker, or disable the in-process scheduler and move fetching to an external cron/systemd timer calling `python -m cti_center.fetch`.

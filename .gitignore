@@ -190,3 +190,5 @@ api.env
 # Claude
 .claude
 HANDOFF.md
+.playwright*
+*.png
